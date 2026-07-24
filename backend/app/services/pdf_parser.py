@@ -1,4 +1,5 @@
 import re
+from functools import cmp_to_key
 
 import fitz  # PyMuPDF
 
@@ -49,6 +50,35 @@ class interval:
             return self.start - other.end
         else:
             return 0.0  # Se solapan
+
+
+def sort_blocks(blocks: list) -> list:
+    """Ordena los bloques de texto de una página aplicando un orden de lectura natural
+
+    que tolera ligeros solapamientos verticales, evitando inversiones de orden.
+    """
+
+    def compare_fallback(a, b) -> int:
+        y_tolerance = 5.0
+        # Si 'a' está claramente por encima de 'b'
+        if a[3] <= b[1] + y_tolerance:
+            return -1
+        # Si 'b' está claramente por encima de 'a'
+        if b[3] <= a[1] + y_tolerance:
+            return 1
+
+        # Si se solapan verticalmente, se lee de izquierda a derecha (por x0)
+        if a[0] < b[0]:
+            return -1
+        if b[0] < a[0]:
+            return 1
+
+        # Si x0 es idéntico, de arriba a abajo (por y0)
+        if a[1] < b[1]:
+            return -1
+        return 1
+
+    return sorted(blocks, key=cmp_to_key(compare_fallback))
 
 
 def recursive_xy_cut(blocks: list) -> list:
@@ -122,7 +152,7 @@ def recursive_xy_cut(blocks: list) -> list:
             return recursive_xy_cut(above) + recursive_xy_cut(below)
 
     # 3. Si no hay cortes geométricos limpios, ordenamos por y0 (arriba a abajo) y luego x0 (izquierda a derecha)
-    return sorted(blocks, key=lambda b: (b[0], b[1]))
+    return sort_blocks(blocks)
 
 
 def filter_nested_blocks(blocks: list) -> list:
