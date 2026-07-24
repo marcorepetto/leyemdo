@@ -1,4 +1,5 @@
 import re
+from functools import cmp_to_key
 
 import fitz  # PyMuPDF
 
@@ -23,10 +24,57 @@ def clean_extracted_text(text: str) -> str:
     return text.strip()
 
 
-def sort_blocks_by_columns(blocks: list) -> str:
-    """Ordena los bloques de texto de una página identificando columnas y barras
+def compare_blocks(a, b) -> int:
+    """Comparador de orden de lectura en 2D para bloques de PDF.
 
-    laterales (layouts multi-columna) para evitar que se mezclen textos paralelos.
+    Define un orden parcial basado en:
+    1. Relación arriba/abajo (si un bloque está completamente sobre el otro).
+    2. Relación izquierda/derecha (si los bloques se solapan verticalmente pero
+       están separados horizontalmente en columnas).
+    """
+    # Coordenadas: x0=0, y0=1, x1=2, y1=3
+    y_tolerance = 3.0
+
+    # 1. Separación vertical: Si 'a' está completamente arriba de 'b'
+    if a[3] <= b[1] + y_tolerance:
+        return -1
+    # Si 'b' está completamente arriba de 'a'
+    if b[3] <= a[1] + y_tolerance:
+        return 1
+
+    # 2. Solapamiento vertical significativo: verificar si están en columnas separadas
+    overlap_x = max(0.0, min(a[2], b[2]) - max(a[0], b[0]))
+    w_a = a[2] - a[0]
+    w_b = b[2] - b[0]
+    min_w = min(w_a, w_b)
+
+    # Si el solapamiento horizontal es menor al 10% del ancho del bloque más angosto,
+    # se asume que son columnas distintas separadas horizontalmente.
+    if overlap_x < 0.1 * min_w:
+        # 'a' está a la izquierda de 'b'
+        if a[2] <= b[0]:
+            return -1
+        # 'b' está a la izquierda de 'a'
+        if b[2] <= a[0]:
+            return 1
+
+    # 3. Si están en la misma columna (o se solapan horizontalmente), ordenar de arriba a abajo
+    if a[1] < b[1]:
+        return -1
+    if b[1] < a[1]:
+        return 1
+
+    # 4. Último recurso: de izquierda a derecha
+    if a[0] < b[0]:
+        return -1
+    return 1
+
+
+def sort_blocks_by_columns(blocks: list) -> str:
+    """Ordena los bloques de texto de una página aplicando el comparador 2D de lectura,
+
+    manteniendo de forma correcta el orden de lectura en layouts de doble columna,
+    barras laterales y preservando la posición natural de ecuaciones centradas.
     """
     # Filtrar solo bloques que sean texto (b[6] == 0) y no estén vacíos
     text_blocks = []
@@ -38,38 +86,15 @@ def sort_blocks_by_columns(blocks: list) -> str:
     if not text_blocks:
         return ""
 
-    # Ordenar los bloques inicialmente por su coordenada horizontal izquierda (x0)
-    text_blocks.sort(key=lambda x: x[0])
-
-    columns = []
-    current_col = [text_blocks[0]]
-    threshold = 50.0  # Tolerancia en puntos (PDF points) para separar columnas
-
-    for b in text_blocks[1:]:
-        # Comparar con el inicio horizontal mínimo de la columna actual
-        min_x0 = min(col_b[0] for col_b in current_col)
-        if abs(b[0] - min_x0) < threshold:
-            current_col.append(b)
-        else:
-            columns.append(current_col)
-            current_col = [b]
-    columns.append(current_col)
-
-    # Ordenar las columnas de izquierda a derecha (usando el promedio x0 de sus bloques)
-    columns.sort(key=lambda col: sum(b[0] for b in col) / len(col))
-
-    sorted_blocks = []
-    for col in columns:
-        # Ordenar los bloques dentro de cada columna de arriba a abajo (coordenada y0)
-        col.sort(key=lambda x: x[1])
-        sorted_blocks.extend(col)
+    # Ordenar los bloques usando el comparador de orden 2D parcial
+    text_blocks.sort(key=cmp_to_key(compare_blocks))
 
     # Concatenar el texto de los bloques ordenados usando doble salto de línea
-    return "\n\n".join(b[4].strip() for b in sorted_blocks)
+    return "\n\n".join(b[4].strip() for b in text_blocks)
 
 
 def parse_pdf(file_bytes: bytes) -> list[dict]:
-    """Abre el PDF en memoria, extrae el texto agrupándolo por columnas y barras laterales,
+    """Abre el PDF en memoria, extrae el texto ordenando los bloques por lectura natural 2D,
 
     aplica la limpieza de texto y retorna la estructura de páginas.
     """
@@ -80,7 +105,7 @@ def parse_pdf(file_bytes: bytes) -> list[dict]:
         # Obtener los bloques estructurados de la página
         raw_blocks = page.get_text("blocks")
 
-        # Ordenar los bloques por columnas para evitar la mezcla de la barra lateral con el contenido principal
+        # Ordenar los bloques usando el algoritmo de lectura natural 2D
         ordered_text = sort_blocks_by_columns(raw_blocks)
 
         cleaned_text = clean_extracted_text(ordered_text)

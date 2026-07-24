@@ -31,9 +31,7 @@ def run_ingest_pipeline(
     }
 
     try:
-        logger.info(
-            f"Iniciando procesamiento de tarea {task_id} para el documento {document_id}"
-        )
+        logger.info(f"Iniciando procesamiento de tarea {task_id} para el documento {document_id}")
 
         # 1. Parsear el PDF
         pages = parse_pdf(file_bytes)
@@ -68,9 +66,7 @@ def run_ingest_pipeline(
         }
 
         TASK_STATUS[task_id]["status"] = "completed"
-        logger.info(
-            f"Procesamiento finalizado con éxito para la tarea {task_id}. Chunks generados: {len(chunks)}"
-        )
+        logger.info(f"Procesamiento finalizado con éxito para la tarea {task_id}. Chunks generados: {len(chunks)}")
 
     except Exception as e:
         logger.exception(f"Error procesando la tarea {task_id}: {str(e)}")

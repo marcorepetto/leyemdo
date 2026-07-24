@@ -86,6 +86,4 @@ def test_upload_and_ingest_pipeline(client):
     # Validar que al menos un chunk detectó una sección (como "1. Introduction" o "References")
     sections_detected = [c["section"] for c in chunks if c["section"] is not None]
     assert len(sections_detected) > 0
-    assert any(
-        "Introduction" in s or "References" in s for s in sections_detected
-    )
+    assert any("Introduction" in s or "References" in s for s in sections_detected)

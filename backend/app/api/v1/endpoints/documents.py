@@ -20,15 +20,9 @@ router = APIRouter()
 async def upload_document(
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
-    profile: str = Query(
-        "paper", description="Perfil de segmentación ('paper' o 'book')"
-    ),
-    chunk_size: int | None = Query(
-        None, description="Tamaño de chunk manual (sobrescribe perfil)"
-    ),
-    chunk_overlap: int | None = Query(
-        None, description="Solapamiento manual (sobrescribe perfil)"
-    ),
+    profile: str = Query("paper", description="Perfil de segmentación ('paper' o 'book')"),
+    chunk_size: int | None = Query(None, description="Tamaño de chunk manual (sobrescribe perfil)"),
+    chunk_overlap: int | None = Query(None, description="Solapamiento manual (sobrescribe perfil)"),
 ):
     """Sube un archivo PDF, calcula su hash y procesa su contenido en segundo plano."""
     if not file.filename.endswith(".pdf"):

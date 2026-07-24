@@ -12,9 +12,7 @@ def detect_section(text: str) -> str | None:
         line = line.strip()
 
         # Coincide con secciones numeradas o títulos estándar (ej. "1. Introduction", "Abstract", "REFERENCES")
-        match = re.match(
-            r"^((?:[0-9]+(?:\.[0-9]+)*\.?\s+)?[A-Z][A-Za-z\s]{2,30})$", line
-        )
+        match = re.match(r"^((?:[0-9]+(?:\.[0-9]+)*\.?\s+)?[A-Z][A-Za-z\s]{2,30})$", line)
         if match:
             return match.group(1).strip()
 
@@ -70,17 +68,13 @@ def split_text_recursively(
         if part_len > chunk_size:
             if current_chunk_parts:
                 c_start = current_chunk_parts[0][1]
-                c_end = current_chunk_parts[-1][1] + len(
-                    current_chunk_parts[-1][0]
-                )
+                c_end = current_chunk_parts[-1][1] + len(current_chunk_parts[-1][0])
                 c_text = text[c_start - start_offset : c_end - start_offset]
                 chunks.append((c_text, c_start, c_end))
                 current_chunk_parts = []
                 current_chunk_len = 0
 
-            sub_chunks = split_text_recursively(
-                part_text, part_start, chunk_size, chunk_overlap, next_separators
-            )
+            sub_chunks = split_text_recursively(part_text, part_start, chunk_size, chunk_overlap, next_separators)
             chunks.extend(sub_chunks)
             continue
 
@@ -90,9 +84,7 @@ def split_text_recursively(
         else:
             if current_chunk_parts:
                 c_start = current_chunk_parts[0][1]
-                c_end = current_chunk_parts[-1][1] + len(
-                    current_chunk_parts[-1][0]
-                )
+                c_end = current_chunk_parts[-1][1] + len(current_chunk_parts[-1][0])
                 c_text = text[c_start - start_offset : c_end - start_offset]
                 chunks.append((c_text, c_start, c_end))
 
@@ -147,9 +139,7 @@ def split_document(
 
     # 2. Segmentar recursivamente el flujo de texto completo
     separators = ["\n\n", "\n", " ", ""]
-    raw_chunks = split_text_recursively(
-        full_text, 0, chunk_size, chunk_overlap, separators
-    )
+    raw_chunks = split_text_recursively(full_text, 0, chunk_size, chunk_overlap, separators)
 
     # 3. Mapear cada chunk con las páginas físicas que cruza
     processed_chunks = []
@@ -168,9 +158,7 @@ def split_document(
         primary_page = overlapped_pages[0]
 
         # Encontrar el límite de la página primaria para calcular la posición relativa del caracter
-        primary_boundary = next(
-            b for b in page_boundaries if b["page_number"] == primary_page
-        )
+        primary_boundary = next(b for b in page_boundaries if b["page_number"] == primary_page)
 
         char_start = max(0, start - primary_boundary["start"])
         char_end = min(
