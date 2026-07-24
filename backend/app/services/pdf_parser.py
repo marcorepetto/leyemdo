@@ -22,6 +22,23 @@ def clean_extracted_text(text: str) -> str:
 
     return text.strip()
 
+class interval:
+    """Clase auxiliar para representar un intervalo 1D (horizontal o vertical) y detectar solapamientos."""
+
+    def __init__(self, start: float, end: float, axis: int = 0):
+        self.start = start
+        self.end = end
+        self.axis = axis  # 0 para horizontal (X), 1 para vertical (Y)
+
+    def __len__(self):
+        return self.end - self.start
+    
+    def overlap(self, other, tolerance: float = 0.0) -> bool:
+        if (self.end <= other.start + tolerance):
+            return False 
+        
+        self.end = max(self.end, other.end)
+        return True
 
 def recursive_xy_cut(blocks: list) -> list:
     """Algoritmo de segmentación y ordenación Recursive X-Y Cut para bloques de PDF.
@@ -39,19 +56,18 @@ def recursive_xy_cut(blocks: list) -> list:
     x_intervals = []
     for b in sorted_by_x:
         x0, x1 = b[0], b[2]
+        current = interval(x0, x1, axis=0)
         if not x_intervals:
-            x_intervals.append([x0, x1])
+            x_intervals.append(current)
         else:
             prev = x_intervals[-1]
             # Si se solapan horizontalmente con una tolerancia de 1.0 punto
-            if x0 <= prev[1] + 1.0:
-                prev[1] = max(prev[1], x1)
-            else:
-                x_intervals.append([x0, x1])
+            if not prev.overlap(current, tolerance=1.0):
+                x_intervals.append(current)
 
     if len(x_intervals) > 1:
         # Dividir a partir del final del primer bloque de X detectado
-        split_x = x_intervals[0][1]
+        split_x = x_intervals[0].end
         left = [b for b in blocks if b[2] <= split_x + 1.0]
         right = [b for b in blocks if b[0] >= split_x - 1.0]
 
@@ -65,19 +81,18 @@ def recursive_xy_cut(blocks: list) -> list:
     y_intervals = []
     for b in sorted_by_y:
         y0, y1 = b[1], b[3]
+        current = interval(y0, y1, axis=1)
         if not y_intervals:
-            y_intervals.append([y0, y1])
+            y_intervals.append(current)
         else:
             prev = y_intervals[-1]
             # Si se solapan verticalmente con una tolerancia de 1.0 punto
-            if y0 <= prev[1] + 1.0:
-                prev[1] = max(prev[1], y1)
-            else:
-                y_intervals.append([y0, y1])
+            if not prev.overlap(current, tolerance=1.0):
+                y_intervals.append(current)
 
     if len(y_intervals) > 1:
         # Dividir a partir del final del primer bloque de Y detectado
-        split_y = y_intervals[0][1]
+        split_y = y_intervals[0].end
         above = [b for b in blocks if b[3] <= split_y + 1.0]
         below = [b for b in blocks if b[1] >= split_y - 1.0]
 
