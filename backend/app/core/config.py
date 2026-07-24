@@ -11,6 +11,12 @@ class Settings(BaseSettings):
     LOG_LEVEL: str = "INFO"
 
     GEMINI_API_KEY: str = ""
+    OPENROUTER_API_KEY: str = ""
+    EMBEDDING_PROVIDER: str = "openrouter"  # "openrouter", "gemini" o "mock"
+    EMBEDDING_MODEL: str = "nvidia/nemotron-3-embed-1b:free"
+    EMBEDDING_DIMENSION: int = 2048
+    LLM_PROVIDER: str = "openrouter"  # "openrouter" o "gemini"
+    LLM_MODEL: str = "nvidia/nemotron-3-ultra-550b-a55b:free"
     VECTOR_DB_PATH: str = "data/vector_db"
 
     model_config = SettingsConfigDict(

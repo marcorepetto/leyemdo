@@ -1,7 +1,7 @@
 import logging
 from datetime import datetime
 
-from app.services.embeddings import MockEmbeddingService
+from app.services.embeddings import get_embedding_service
 from app.services.pdf_parser import parse_pdf
 from app.services.text_splitter import split_document
 from app.services.vector_db import ChunkModel, DocumentModel, VectorDB
@@ -12,7 +12,7 @@ logger = logging.getLogger("ingest-service")
 TASK_STATUS = {}
 
 
-def run_ingest_pipeline(
+async def run_ingest_pipeline(
     task_id: str,
     document_id: str,
     file_bytes: bytes,
@@ -22,7 +22,7 @@ def run_ingest_pipeline(
     custom_chunk_overlap: int | None = None,
 ):
     """Orquestador que corre como BackgroundTask de FastAPI para procesar el PDF,
-    extraer texto, segmentarlo, generar embeddings mock y guardarlo en LanceDB.
+    extraer texto, segmentarlo, generar embeddings (reales/mock) y guardarlo en LanceDB.
     """
     TASK_STATUS[task_id] = {
         "status": "processing",
@@ -57,11 +57,11 @@ def run_ingest_pipeline(
         # 3. Segmentar el documento en chunks
         chunks = split_document(pages, chunk_size, chunk_overlap)
 
-        # 4. Generar embeddings mock deterministas para los chunks
-        logger.info(f"Generando embeddings mock para {len(chunks)} chunks...")
-        embedding_service = MockEmbeddingService()
+        # 4. Generar embeddings (reales/mock) para los chunks
+        logger.info(f"Generando embeddings para {len(chunks)} chunks...")
+        embedding_service = get_embedding_service()
         texts_to_embed = [c["text"] for c in chunks]
-        vectors = embedding_service.get_embeddings(texts_to_embed)
+        vectors = await embedding_service.get_embeddings(texts_to_embed)
 
         # 5. Estructurar y guardar en LanceDB
         doc_metadata = DocumentModel(

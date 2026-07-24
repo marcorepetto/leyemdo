@@ -34,7 +34,18 @@ class ChunkModel(LanceModel):
     char_start: int = Field(description="Offset de caracter inicial")
     char_end: int = Field(description="Offset de caracter final")
     section: str | None = Field(default=None, description="Sección o título del documento")
-    vector: Vector(768) = Field(description="Embedding del fragmento (768 dimensiones)")
+    vector: Vector(2048) = Field(description="Embedding del fragmento (2048 dimensiones para Nemotron-3)")
+
+
+class ChatMessageModel(LanceModel):
+    """Esquema de la tabla 'chat_messages' en LanceDB."""
+
+    message_id: str = Field(description="UUID único del mensaje")
+    document_id: str = Field(description="Relación lógica con el documento")
+    role: str = Field(description="Rol del emisor ('user' o 'assistant')")
+    content: str = Field(description="Contenido textual del mensaje")
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    reasoning_details: str | None = Field(default=None, description="Razonamiento opcional del modelo")
 
 
 class VectorDB:
@@ -65,6 +76,7 @@ class VectorDB:
         logger.info("Inicializando tablas en LanceDB...")
         db.create_table("documents", schema=DocumentModel, exist_ok=True)
         db.create_table("chunks", schema=ChunkModel, exist_ok=True)
+        db.create_table("chat_messages", schema=ChatMessageModel, exist_ok=True)
 
     @classmethod
     def add_document(cls, doc: DocumentModel, chunks: list[ChunkModel]):
@@ -158,7 +170,7 @@ class VectorDB:
 
     @classmethod
     def delete_document(cls, document_id: str) -> bool:
-        """Elimina un documento y todos sus chunks asociados de la base de datos."""
+        """Elimina un documento, sus chunks y su historial de chat de la base de datos."""
         db = cls.get_db()
         table_names = cls._get_table_names(db)
 
@@ -180,7 +192,12 @@ class VectorDB:
         # Eliminar de la tabla chunks
         chunk_table.delete(f"document_id = '{document_id}'")
 
-        logger.info(f"Documento {document_id} y sus chunks eliminados correctamente.")
+        # Eliminar de la tabla chat_messages si existe
+        if "chat_messages" in table_names:
+            chat_table = db.open_table("chat_messages")
+            chat_table.delete(f"document_id = '{document_id}'")
+
+        logger.info(f"Documento {document_id}, chunks e historial de chat eliminados correctamente.")
         return True
 
     @classmethod
@@ -198,14 +215,9 @@ class VectorDB:
         # Formatear resultados
         formatted_results = []
         for res in results:
-            # Calcular score de similitud simple a partir de la distancia L2
-            # Como los vectores están normalizados a longitud unitaria:
-            # L2_dist_sq = sum((x - y)^2) = 2 - 2 * cos_sim
-            # cos_sim = 1.0 - L2_dist_sq / 2
             distance = res.get("_distance", 0.0)
             score = max(0.0, 1.0 - (distance / 2.0))
 
-            # Formatear el chunk
             pages = res.get("pages", [])
             if hasattr(pages, "tolist"):
                 pages = pages.tolist()
@@ -230,3 +242,58 @@ class VectorDB:
             )
 
         return formatted_results
+
+    @classmethod
+    def add_chat_messages(cls, messages: list[ChatMessageModel]):
+        """Guarda mensajes de chat en la base de datos."""
+        db = cls.get_db()
+        table = db.open_table("chat_messages")
+        table.add(messages)
+        logger.info(f"Guardados {len(messages)} mensajes de chat en LanceDB.")
+
+    @classmethod
+    def get_chat_history(cls, document_id: str) -> list[dict]:
+        """Recupera el historial de chat de un documento ordenado cronológicamente."""
+        db = cls.get_db()
+        table_names = cls._get_table_names(db)
+        if "chat_messages" not in table_names:
+            return []
+
+        table = db.open_table("chat_messages")
+        messages = table.search().where(f"document_id = '{document_id}'").to_list()
+
+        # Formatear y ordenar
+        for msg in messages:
+            msg.pop("_distance", None)
+
+            # Normalizar timestamp
+            if isinstance(msg["timestamp"], str):
+                try:
+                    msg["timestamp"] = datetime.fromisoformat(msg["timestamp"])
+                except ValueError:
+                    pass
+            elif isinstance(msg["timestamp"], (int, float)):
+                msg["timestamp"] = datetime.fromtimestamp(msg["timestamp"])
+
+        # Ordenar por timestamp cronológicamente
+        messages.sort(key=lambda x: x.get("timestamp", datetime.min))
+
+        # Formatear timestamp a ISO-string
+        for msg in messages:
+            if isinstance(msg["timestamp"], datetime):
+                msg["timestamp"] = msg["timestamp"].isoformat()
+
+        return messages
+
+    @classmethod
+    def clear_chat_history(cls, document_id: str) -> bool:
+        """Limpia el historial de chat de un documento."""
+        db = cls.get_db()
+        table_names = cls._get_table_names(db)
+        if "chat_messages" not in table_names:
+            return False
+
+        table = db.open_table("chat_messages")
+        table.delete(f"document_id = '{document_id}'")
+        logger.info(f"Historial de chat para documento {document_id} eliminado.")
+        return True

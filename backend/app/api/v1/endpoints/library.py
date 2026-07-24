@@ -2,7 +2,7 @@ import logging
 
 from fastapi import APIRouter, HTTPException, Query, status
 
-from app.services.embeddings import MockEmbeddingService
+from app.services.embeddings import get_embedding_service
 from app.services.vector_db import VectorDB
 
 router = APIRouter()
@@ -45,11 +45,11 @@ def delete_document(document_id: str):
 
 
 @router.get("/search")
-def search_library(
+async def search_library(
     q: str = Query(..., description="Consulta de búsqueda semántica en lenguaje natural"),
     limit: int = Query(5, ge=1, le=50, description="Cantidad máxima de fragmentos a retornar"),
 ):
-    """Buscar semánticamente fragmentos de texto en la biblioteca usando embeddings mock."""
+    """Buscar semánticamente fragmentos de texto en la biblioteca usando embeddings mock o reales."""
     try:
         if not q.strip():
             raise HTTPException(
@@ -57,9 +57,9 @@ def search_library(
                 detail="La consulta de búsqueda no puede estar vacía.",
             )
 
-        # 1. Obtener el embedding mock para la consulta
-        embedding_service = MockEmbeddingService()
-        query_vector = embedding_service.get_query_embedding(q)
+        # 1. Obtener el embedding usando la fábrica
+        embedding_service = get_embedding_service()
+        query_vector = await embedding_service.get_query_embedding(q)
 
         # 2. Realizar la búsqueda vectorial
         results = VectorDB.search_chunks(query_vector, limit=limit)
