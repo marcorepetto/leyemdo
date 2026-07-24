@@ -33,6 +33,32 @@ def recursive_xy_cut(blocks: list) -> list:
     if len(blocks) <= 1:
         return blocks
 
+    # 2. Intentar encontrar un corte vertical (X-cut)
+    # Ordenamos por x0
+    sorted_by_x = sorted(blocks, key=lambda b: b[0])
+    x_intervals = []
+    for b in sorted_by_x:
+        x0, x1 = b[0], b[2]
+        if not x_intervals:
+            x_intervals.append([x0, x1])
+        else:
+            prev = x_intervals[-1]
+            # Si se solapan horizontalmente con una tolerancia de 1.0 punto
+            if x0 <= prev[1] + 1.0:
+                prev[1] = max(prev[1], x1)
+            else:
+                x_intervals.append([x0, x1])
+
+    if len(x_intervals) > 1:
+        # Dividir a partir del final del primer bloque de X detectado
+        split_x = x_intervals[0][1]
+        left = [b for b in blocks if b[2] <= split_x + 1.0]
+        right = [b for b in blocks if b[0] >= split_x - 1.0]
+
+        # Validar partición limpia no-vacía
+        if left and right and len(left) + len(right) == len(blocks):
+            return recursive_xy_cut(left) + recursive_xy_cut(right)
+        
     # 1. Intentar encontrar un corte horizontal (Y-cut)
     # Ordenamos por y0 para agrupar
     sorted_by_y = sorted(blocks, key=lambda b: b[1])
@@ -59,34 +85,9 @@ def recursive_xy_cut(blocks: list) -> list:
         if above and below and len(above) + len(below) == len(blocks):
             return recursive_xy_cut(above) + recursive_xy_cut(below)
 
-    # 2. Intentar encontrar un corte vertical (X-cut)
-    # Ordenamos por x0
-    sorted_by_x = sorted(blocks, key=lambda b: b[0])
-    x_intervals = []
-    for b in sorted_by_x:
-        x0, x1 = b[0], b[2]
-        if not x_intervals:
-            x_intervals.append([x0, x1])
-        else:
-            prev = x_intervals[-1]
-            # Si se solapan horizontalmente con una tolerancia de 1.0 punto
-            if x0 <= prev[1] + 1.0:
-                prev[1] = max(prev[1], x1)
-            else:
-                x_intervals.append([x0, x1])
-
-    if len(x_intervals) > 1:
-        # Dividir a partir del final del primer bloque de X detectado
-        split_x = x_intervals[0][1]
-        left = [b for b in blocks if b[2] <= split_x + 1.0]
-        right = [b for b in blocks if b[0] >= split_x - 1.0]
-
-        # Validar partición limpia no-vacía
-        if left and right and len(left) + len(right) == len(blocks):
-            return recursive_xy_cut(left) + recursive_xy_cut(right)
 
     # 3. Si no hay cortes geométricos limpios, ordenamos por y0 (arriba a abajo) y luego x0 (izquierda a derecha)
-    return sorted(blocks, key=lambda b: (b[1], b[0]))
+    return sorted(blocks, key=lambda b: (b[0], b[1]))
 
 
 def sort_blocks_by_columns(blocks: list) -> str:
