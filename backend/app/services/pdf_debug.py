@@ -1,8 +1,6 @@
-from functools import cmp_to_key
-
 import fitz  # PyMuPDF
 
-from app.services.pdf_parser import compare_blocks
+from app.services.pdf_parser import recursive_xy_cut
 
 
 def draw_debug_annotations(file_bytes: bytes, page_number: int) -> bytes:
@@ -25,8 +23,8 @@ def draw_debug_annotations(file_bytes: bytes, page_number: int) -> bytes:
         if len(b) > 6 and b[6] == 0 and b[4].strip():
             text_blocks.append(b)
 
-    # Ordenar los bloques usando el comparador de orden 2D topológico
-    text_blocks.sort(key=cmp_to_key(compare_blocks))
+    # Ordenar los bloques usando el algoritmo de Recursive X-Y Cut
+    text_blocks = recursive_xy_cut(text_blocks)
 
     # Dibujar anotaciones sobre la página
     for index, b in enumerate(text_blocks, start=1):
