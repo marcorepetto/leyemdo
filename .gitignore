@@ -1,0 +1,18 @@
+.obsidian/
+
+# Python virtual environment
+.venv/
+backend/.venv/
+
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# Local environment variables
+.env
+backend/.env
+
+# Local data (Database/Embeddings)
+backend/data/
