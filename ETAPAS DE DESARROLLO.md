@@ -33,7 +33,7 @@ Esta tabla registra el estado actual de cada especificación según el ciclo de 
 
 | ID | Título | Definida | Planeada | Plan de Des. | Implementada | Aprobada |
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| **Spec 1** | Backend Base | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
+| **Spec 1** | Backend Base | ✔️ Sí | ✔️ Sí | ❌ No | ❌ No | ❌ No |
 | **Spec 2** | Parsing & Chunking | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
 | **Spec 3** | Base de Datos Vectorial | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
 | **Spec 4** | Integración LLM & ZDP | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
