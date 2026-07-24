@@ -66,3 +66,34 @@ async def test_openrouter_chat_stream():
             collected.append(chunk)
 
         assert "".join(collected) == "Hello world"
+
+
+@pytest.mark.anyio
+@patch("httpx.AsyncClient.post")
+async def test_openrouter_rerank(mock_post):
+    mock_response = MagicMock()
+    mock_response.status_code = 200
+    mock_response.json.return_value = {
+        "results": [
+            {"index": 1, "relevance_score": 0.95},
+            {"index": 0, "relevance_score": 0.15},
+        ]
+    }
+    mock_post.return_value = mock_response
+
+    settings.OPENROUTER_API_KEY = "mock_key"
+
+    query = "a cat on a wall"
+    docs = ["A dog in the park", "A black cat climbing a brick wall"]
+
+    results = await OpenRouterService.rerank(query, docs, top_n=2)
+
+    assert len(results) == 2
+    assert results[0]["index"] == 1
+    assert results[0]["relevance_score"] == 0.95
+    assert results[1]["index"] == 0
+    assert results[1]["relevance_score"] == 0.15
+
+    mock_post.assert_called_once()
+    args, kwargs = mock_post.call_args
+    assert args[0] == "https://openrouter.ai/api/v1/rerank"

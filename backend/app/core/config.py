@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     EMBEDDING_DIMENSION: int = 2048
     LLM_PROVIDER: str = "openrouter"  # "openrouter" o "gemini"
     LLM_MODEL: str = "nvidia/nemotron-3-ultra-550b-a55b:free"
+    RERANK_MODEL: str = "nvidia/llama-nemotron-rerank-vl-1b-v2:free"
     VECTOR_DB_PATH: str = "data/vector_db"
 
     model_config = SettingsConfigDict(

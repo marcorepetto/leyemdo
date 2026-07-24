@@ -117,3 +117,43 @@ class OpenRouterService:
                     status_code=status.HTTP_502_BAD_GATEWAY,
                     detail=f"Error de red contactando la API de OpenRouter para Chat completions: {e}",
                 ) from e
+
+    @classmethod
+    async def rerank(cls, query: str, documents: list[str], top_n: int) -> list[dict]:
+        """Llama al endpoint de Reranking de OpenRouter para ordenar documentos por relevancia."""
+        if not documents:
+            return []
+
+        headers = cls._get_headers()
+        formatted_docs = [{"text": doc} for doc in documents]
+        data = {
+            "model": settings.RERANK_MODEL,
+            "query": query,
+            "documents": formatted_docs,
+            "top_n": top_n,
+        }
+
+        url = "https://openrouter.ai/api/v1/rerank"
+        logger.info(
+            f"Enviando solicitud de Rerank a OpenRouter ({settings.RERANK_MODEL}) "
+            f"para {len(documents)} documentos con query '{query[:30]}...' (top_n={top_n})"
+        )
+
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(url, headers=headers, json=data, timeout=30.0)
+                if response.status_code != 200:
+                    logger.error(f"Error de OpenRouter Rerank API: {response.status_code} - {response.text}")
+                    raise HTTPException(
+                        status_code=response.status_code,
+                        detail=f"OpenRouter Rerank API error: {response.text}",
+                    )
+
+                res_data = response.json()
+                return res_data.get("results", [])
+            except httpx.RequestError as e:
+                logger.error(f"Error de red contactando OpenRouter Rerank: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=f"Error de red contactando la API de OpenRouter Rerank: {e}",
+                ) from e
