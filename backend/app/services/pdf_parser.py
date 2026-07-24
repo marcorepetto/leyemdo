@@ -56,7 +56,14 @@ def sort_blocks(blocks: list) -> list:
     def compare_fallback(a, b) -> int:
         # Revisar overlap
         y_diff = a[1] - b[1]
+        height_a = a[3] - a[1]
+        height_b = b[3] - b[1]
+        y_diff = y_diff / max(height_a, height_b, 1.0)  # Normalizar por altura para tolerancia relativa
+
         x_diff = a[0] - b[0]
+        width_a = a[2] - a[0]
+        width_b = b[2] - b[0]
+        x_diff = x_diff / max(width_a, width_b, 1.0)  # Normalizar por ancho para tolerancia relativa
 
         if abs(y_diff) > abs(x_diff):
             return -1 if y_diff < 0 else 1
