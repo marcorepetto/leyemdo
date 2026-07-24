@@ -1,6 +1,6 @@
 # Especificación de Requisitos (Spec): Spec 4 - Integración de LLM y Lógica ZDP
 
-Este documento establece la definición formal de la **Spec 4: Integración de LLM y Lógica ZDP** según la metodología Spec Driven Development (SDD). Esta especificación define el alcance, límites, arquitectura y flujos para la conexión con la API de OpenRouter (con soporte para Gemini y otros modelos) y la lógica de tutoría interactiva basada en la Zona de Desarrollo Próximo (ZDP).
+Este documento establece la definición formal de la **Spec 4: Integración de LLM y Lógica ZDP** según la metodología Spec Driven Development (SDD). Esta especificación define el alcance, límites, arquitectura y flujos para la conexión con la API de OpenRouter (con soporte para Gemini y otros modelos), la lógica de tutoría interactiva basada en la Zona de Desarrollo Próximo (ZDP) y la optimización de Reranking.
 
 ---
 
@@ -11,17 +11,20 @@ El objetivo de esta Spec es:
 1. Reemplazar los embeddings mock por **embeddings semánticos reales** utilizando la API de **OpenRouter** (modelo por defecto `nvidia/nemotron-3-embed-1b:free` con dimensión 2048).
 2. Conectar el sistema a un modelo de lenguaje para chat conversacional (por defecto `nvidia/nemotron-3-ultra-550b-a55b:free` o similar vía OpenRouter).
 3. Diseñar e inyectar prompts de sistema estructurados para aplicar la filosofía de la **Zona de Desarrollo Próximo (ZDP)**, de modo que el LLM actúe como un tutor interactivo que guíe el aprendizaje del estudiante mediante andamiaje (scaffolding).
+4. Implementar un pipeline de **Reranking** en la búsqueda para optimizar la relevancia de los fragmentos recuperados enviando un conjunto inicial amplio a re-ordenar mediante un modelo especializado (`nvidia/llama-nemotron-rerank-vl-1b-v2:free`).
 
 ---
 
 ## 2. Alcance (Límites del Sistema)
 
 ### Qué HACE la Spec (In-Scope)
-* **Conexión con OpenRouter API:** Integración de llamadas HTTP (o SDK) a OpenRouter para la generación de embeddings y de chat completions.
+* **Conexión con OpenRouter API:** Integración de llamadas HTTP (o SDK) a OpenRouter para la generación de embeddings, completions y reranking.
 * **Integración del Ingest Pipeline (Real Embeddings):** Modificación del pipeline de la Spec 2 y 3 para generar embeddings reales de 2048 dimensiones al momento de subir e indexar un PDF.
-* **Motor RAG Completo:**
+* **Motor RAG con Reranking:**
   * Generación de embeddings reales de 2048d para las consultas de búsqueda del usuario.
-  * Recuperación del Top K (por defecto 5) chunks más relevantes desde LanceDB.
+  * Recuperación inicial de un pool amplio de fragmentos (ej. `vector_limit = 20`) desde LanceDB.
+  * Re-ordenamiento y evaluación de relevancia de los fragmentos recuperados contra la consulta del usuario utilizando el modelo de rerank de OpenRouter.
+  * Retorno final de los `limit` (top_n) fragmentos con las puntuaciones de relevancia actualizadas.
 * **Lógica Pedagógica ZDP (Modo Híbrido):**
   * Inyección de instrucciones de sistema para guiar al modelo a explicar conceptos difíciles de forma sencilla, pero planteando de inmediato preguntas de validación o retos conceptuales.
   * La respuesta del LLM debe incluir una explicación fundamentada en el documento de soporte, seguida de preguntas activas de andamiaje.
@@ -51,40 +54,21 @@ El objetivo de esta Spec es:
 
 ## 4. Arquitectura y Flujos de Datos
 
-### Flujo de Datos: Ingesta y Generación de Embeddings Reales
+### Flujo de Datos: Búsqueda Semántica con Reranking
 ```mermaid
 sequenceDiagram
-    participant API as Ingest Pipeline
-    participant OR as OpenRouter API
-    participant DB as LanceDB (Local Storage)
-
-    API->>API: Ejecutar Parsing & Chunking (Spec 2)
-    API->>OR: POST /embeddings (nemotron-3-embed-1b)
-    OR-->>API: Vectores reales de 2048 dimensiones
-    API->>DB: Guardar metadatos en tabla 'documents'
-    API->>DB: Guardar chunks y vectores de 2048d en tabla 'chunks'
-```
-
-### Flujo de Datos: Conversación en Chat con RAG y ZDP
-```mermaid
-sequenceDiagram
-    participant UI as Lector UI (React)
+    participant UI as Cliente API / UI
     participant API as FastAPI Server
-    participant OR as OpenRouter API
     participant DB as LanceDB (Local Storage)
+    participant OR as OpenRouter API (Reranker)
 
-    UI->>API: POST /chat/message { document_id, message }
-    API->>OR: POST /embeddings (generar vector para query)
-    OR-->>API: Vector query (2048 d)
-    API->>DB: Búsqueda vectorial (L2) en tabla 'chunks'
-    DB-->>API: Top K (5) chunks más similares
-    API->>DB: Recuperar historial de 'chat_messages' para el document_id
-    DB-->>API: Lista de mensajes previos (historial)
-    API->>API: Compilar prompt final (Instrucciones ZDP + Chunks + Historial)
-    API->>OR: POST /chat/completions (stream=True)
-    OR-->>API: Flujo de tokens en tiempo real
-    API-->>UI: Server-Sent Events (SSE) stream de respuesta
-    API->>DB: Guardar la pregunta del usuario y la respuesta en 'chat_messages'
+    UI->>API: GET /search?q=query&limit=5&vector_limit=20
+    API->>API: Generar vector para query (2048 d)
+    API->>DB: Búsqueda vectorial inicial (limit=vector_limit)
+    DB-->>API: Retorna 20 candidatos iniciales
+    API->>OR: POST /rerank (query, 20 candidatos, top_n=5)
+    OR-->>API: Retorna 5 candidatos re-ordenados con score de relevancia
+    API-->>UI: Retorna JSON final de 5 chunks altamente relevantes
 ```
 
 ---
