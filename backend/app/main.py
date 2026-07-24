@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.v1.router import api_router
 from app.core.config import settings
+from app.services.vector_db import VectorDB
 
 # Configure logging
 logging.basicConfig(
@@ -19,6 +20,11 @@ logger = logging.getLogger("backend-base")
 async def lifespan(app: FastAPI):
     logger.info(f"Iniciando {settings.PROJECT_NAME} v{settings.VERSION}...")
     logger.info(f"Rutas de API disponibles bajo el prefijo {settings.API_V1_STR}")
+    try:
+        VectorDB.init_db()
+        logger.info("Base de datos vectorial inicializada correctamente.")
+    except Exception as e:
+        logger.error(f"Error inicializando la base de datos vectorial: {e}", exc_info=True)
     yield
     logger.info(f"Apagando {settings.PROJECT_NAME}...")
 

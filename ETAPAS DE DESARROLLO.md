@@ -35,7 +35,7 @@ Esta tabla registra el estado actual de cada especificación según el ciclo de 
 | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
 | **Spec 1** | Backend Base | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí |
 | **Spec 2** | Parsing & Chunking | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí |
-| **Spec 3** | Base de Datos Vectorial | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
+| **Spec 3** | Base de Datos Vectorial | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí |
 | **Spec 4** | Integración LLM & ZDP | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
 | **Spec 5** | Servicios de Acción Contextual | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
 | **Spec 6** | Visor Base Okular | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |

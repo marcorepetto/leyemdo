@@ -10,6 +10,8 @@ dependencies = [
     "pydantic-settings>=2.2.1",
     "pymupdf>=1.28.0",
     "python-multipart>=0.0.32",
+    "lancedb>=0.34.0",
+    "pyarrow>=25.0.0",
 ]
 
 [dependency-groups]

@@ -11,7 +11,8 @@ from fastapi import (
     status,
 )
 
-from app.services.ingest import IN_MEMORY_DB, TASK_STATUS, run_ingest_pipeline
+from app.services.ingest import TASK_STATUS, run_ingest_pipeline
+from app.services.vector_db import VectorDB
 
 router = APIRouter()
 
@@ -36,7 +37,7 @@ async def upload_document(
     document_id = hashlib.sha256(file_bytes).hexdigest()
 
     # Verificar si el documento ya se procesó
-    if document_id in IN_MEMORY_DB:
+    if VectorDB.get_document(document_id) is not None:
         return {
             "task_id": "already-processed",
             "status": "completed",
@@ -60,6 +61,7 @@ async def upload_document(
         task_id,
         document_id,
         file_bytes,
+        file.filename,
         profile,
         chunk_size,
         chunk_overlap,
@@ -90,10 +92,17 @@ def get_task_status(task_id: str):
 @router.get("/chunks/{document_id}")
 def get_document_chunks(document_id: str):
     """Recupera la lista de fragmentos y metadatos del documento procesado."""
-    if document_id not in IN_MEMORY_DB:
+    doc = VectorDB.get_document(document_id)
+    if not doc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Documento no encontrado o no ha finalizado su procesamiento.",
         )
 
-    return IN_MEMORY_DB[document_id]
+    chunks = VectorDB.get_document_chunks(document_id)
+    return {
+        "document_id": document_id,
+        "chunks": chunks,
+        "pages_count": doc["pages_count"],
+        "total_chars": doc["total_chars"],
+    }
