@@ -39,6 +39,15 @@ class interval:
         
         self.end = max(self.end, other.end)
         return True
+    
+    def separation(self, other) -> float:
+        """Calcula la separación entre dos intervalos. Retorna 0 si se solapan."""
+        if self.end <= other.start:
+            return other.start - self.end
+        elif other.end <= self.start:
+            return self.start - other.end
+        else:
+            return 0.0  # Se solapan
 
 def recursive_xy_cut(blocks: list) -> list:
     """Algoritmo de segmentación y ordenación Recursive X-Y Cut para bloques de PDF.
@@ -65,9 +74,14 @@ def recursive_xy_cut(blocks: list) -> list:
             if not prev.overlap(current, tolerance=1.0):
                 x_intervals.append(current)
 
+    gaps_x = [
+        (current.end, current.separation(next))
+        for current, next in zip(x_intervals[:-1], x_intervals[1:])
+    ]
+
     if len(x_intervals) > 1:
         # Dividir a partir del final del primer bloque de X detectado
-        split_x = x_intervals[0].end
+        split_x, _ = max(gaps_x, key=lambda g: g[1])  # Tomar el gap más grande
         left = [b for b in blocks if b[2] <= split_x + 1.0]
         right = [b for b in blocks if b[0] >= split_x - 1.0]
 
@@ -90,9 +104,14 @@ def recursive_xy_cut(blocks: list) -> list:
             if not prev.overlap(current, tolerance=1.0):
                 y_intervals.append(current)
 
+    gaps_y = [
+        (current.end, current.separation(next))
+        for current, next in zip(y_intervals[:-1], y_intervals[1:])
+    ]   
+
     if len(y_intervals) > 1:
         # Dividir a partir del final del primer bloque de Y detectado
-        split_y = y_intervals[0].end
+        split_y, _ = max(gaps_y, key=lambda g: g[1])  # Tomar el gap más grande
         above = [b for b in blocks if b[3] <= split_y + 1.0]
         below = [b for b in blocks if b[1] >= split_y - 1.0]
 
