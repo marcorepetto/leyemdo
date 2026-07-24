@@ -45,7 +45,7 @@ Todas las especificaciones se organizarán en la carpeta `/specs/` en la raíz d
 
 ### Convenciones de Desarrollo y Control de Versiones (Git)
 * **Feedback mediante Artifacts:** Cada vez que se modifique algún documento de planificación o definición, el agente enviará un *artifact* al usuario para recibir su retroalimentación inmediata.
-* **Ramas de Git:** Al inicio de cada petición, se debe definir explícitamente en qué rama de git se trabajará y cuál será su rama base (ej. `rama-de-la-spec` partiendo de `main`).
+* **Ramas de Git:** Al inicio de cada petición, se debe definir explícitamente en qué rama de git se trabajará y cuál será su rama base. El nombre de la rama no debe contener la palabra "spec" y debe seguir el formato `{modulo}/{titulo-breve}` (ej. `backend/backend-base` partiendo de `main`).
 * **Hitos de Commit:** Se realizará un *commit* en git al finalizar y ser aprobada cada una de las siguientes etapas principales para asegurar puntos de restauración limpios:
   1. Aprobación de la **Definición**.
   2. Aprobación de la **Planificación**.
