@@ -1,6 +1,6 @@
 import fitz  # PyMuPDF
 
-from app.services.pdf_parser import recursive_xy_cut
+from app.services.pdf_parser import filter_nested_blocks, recursive_xy_cut
 
 
 def draw_debug_annotations(file_bytes: bytes, page_number: int) -> bytes:
@@ -23,8 +23,11 @@ def draw_debug_annotations(file_bytes: bytes, page_number: int) -> bytes:
         if len(b) > 6 and b[6] == 0 and b[4].strip():
             text_blocks.append(b)
 
+    # Eliminar bloques anidados geométricamente
+    clean_blocks = filter_nested_blocks(text_blocks)
+
     # Ordenar los bloques usando el algoritmo de Recursive X-Y Cut
-    text_blocks = recursive_xy_cut(text_blocks)
+    text_blocks = recursive_xy_cut(clean_blocks)
 
     # Dibujar anotaciones sobre la página
     for index, b in enumerate(text_blocks, start=1):

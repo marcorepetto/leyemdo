@@ -22,6 +22,7 @@ def clean_extracted_text(text: str) -> str:
 
     return text.strip()
 
+
 class interval:
     """Clase auxiliar para representar un intervalo 1D (horizontal o vertical) y detectar solapamientos."""
 
@@ -32,14 +33,14 @@ class interval:
 
     def __len__(self):
         return self.end - self.start
-    
+
     def overlap(self, other, tolerance: float = 0.0) -> bool:
-        if (self.end <= other.start + tolerance):
-            return False 
-        
+        if self.end <= other.start + tolerance:
+            return False
+
         self.end = max(self.end, other.end)
         return True
-    
+
     def separation(self, other) -> float:
         """Calcula la separación entre dos intervalos. Retorna 0 si se solapan."""
         if self.end <= other.start:
@@ -48,6 +49,7 @@ class interval:
             return self.start - other.end
         else:
             return 0.0  # Se solapan
+
 
 def recursive_xy_cut(blocks: list) -> list:
     """Algoritmo de segmentación y ordenación Recursive X-Y Cut para bloques de PDF.
@@ -76,7 +78,7 @@ def recursive_xy_cut(blocks: list) -> list:
 
     gaps_x = [
         (current.end, current.separation(next))
-        for current, next in zip(x_intervals[:-1], x_intervals[1:])
+        for current, next in zip(x_intervals[:-1], x_intervals[1:], strict=False)
     ]
 
     if len(x_intervals) > 1:
@@ -88,7 +90,7 @@ def recursive_xy_cut(blocks: list) -> list:
         # Validar partición limpia no-vacía
         if left and right and len(left) + len(right) == len(blocks):
             return recursive_xy_cut(left) + recursive_xy_cut(right)
-        
+
     # 1. Intentar encontrar un corte horizontal (Y-cut)
     # Ordenamos por y0 para agrupar
     sorted_by_y = sorted(blocks, key=lambda b: b[1])
@@ -106,8 +108,8 @@ def recursive_xy_cut(blocks: list) -> list:
 
     gaps_y = [
         (current.end, current.separation(next))
-        for current, next in zip(y_intervals[:-1], y_intervals[1:])
-    ]   
+        for current, next in zip(y_intervals[:-1], y_intervals[1:], strict=False)
+    ]
 
     if len(y_intervals) > 1:
         # Dividir a partir del final del primer bloque de Y detectado
@@ -119,9 +121,50 @@ def recursive_xy_cut(blocks: list) -> list:
         if above and below and len(above) + len(below) == len(blocks):
             return recursive_xy_cut(above) + recursive_xy_cut(below)
 
-
     # 3. Si no hay cortes geométricos limpios, ordenamos por y0 (arriba a abajo) y luego x0 (izquierda a derecha)
     return sorted(blocks, key=lambda b: (b[0], b[1]))
+
+
+def filter_nested_blocks(blocks: list) -> list:
+    """Elimina bloques que están contenidos de forma casi completa (solapamiento > 90% del área del menor)
+
+    dentro de otros bloques mayores. Esto resuelve duplicaciones y anidamientos de PyMuPDF.
+    """
+    to_remove = set()
+    for i, a in enumerate(blocks):
+        w_a = a[2] - a[0]
+        h_a = a[3] - a[1]
+        area_a = w_a * h_a
+        if area_a <= 0:
+            to_remove.add(i)
+            continue
+
+        for j, b in enumerate(blocks):
+            if i == j:
+                continue
+
+            w_b = b[2] - b[0]
+            h_b = b[3] - b[1]
+            area_b = w_b * h_b
+
+            # Si el bloque b es más pequeño o igual, no puede contener a 'a'
+            if area_b <= area_a:
+                continue
+
+            # Calcular intersección
+            ix0 = max(a[0], b[0])
+            iy0 = max(a[1], b[1])
+            ix1 = min(a[2], b[2])
+            iy1 = min(a[3], b[3])
+
+            if ix1 > ix0 and iy1 > iy0:
+                inter_area = (ix1 - ix0) * (iy1 - iy0)
+                # Si el 90% o más de 'a' está dentro de 'b'
+                if inter_area >= 0.9 * area_a:
+                    to_remove.add(i)
+                    break
+
+    return [b for i, b in enumerate(blocks) if i not in to_remove]
 
 
 def sort_blocks_by_columns(blocks: list) -> str:
@@ -140,8 +183,11 @@ def sort_blocks_by_columns(blocks: list) -> str:
     if not text_blocks:
         return ""
 
+    # Eliminar bloques anidados geométricamente
+    clean_blocks = filter_nested_blocks(text_blocks)
+
     # Ordenar los bloques usando el algoritmo de Recursive X-Y Cut
-    ordered_blocks = recursive_xy_cut(text_blocks)
+    ordered_blocks = recursive_xy_cut(clean_blocks)
 
     # Concatenar el texto de los bloques ordenados usando doble salto de línea
     return "\n\n".join(b[4].strip() for b in ordered_blocks)
