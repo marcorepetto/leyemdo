@@ -53,30 +53,15 @@ class interval:
 
 
 def sort_blocks(blocks: list) -> list:
-    """Ordena los bloques de texto de una página aplicando un orden de lectura natural
-
-    que tolera ligeros solapamientos verticales, evitando inversiones de orden.
-    """
-
     def compare_fallback(a, b) -> int:
-        y_tolerance = 5.0
-        # Si 'a' está claramente por encima de 'b'
-        if a[3] <= b[1] + y_tolerance:
-            return -1
-        # Si 'b' está claramente por encima de 'a'
-        if b[3] <= a[1] + y_tolerance:
-            return 1
+        # Revisar overlap
+        y_diff = a[1] - b[1]
+        x_diff = a[0] - b[0]
 
-        # Si se solapan verticalmente, se lee de izquierda a derecha (por x0)
-        if a[0] < b[0]:
-            return -1
-        if b[0] < a[0]:
-            return 1
-
-        # Si x0 es idéntico, de arriba a abajo (por y0)
-        if a[1] < b[1]:
-            return -1
-        return 1
+        if abs(y_diff) > abs(x_diff):
+            return -1 if y_diff < 0 else 1
+        else:
+            return -1 if x_diff < 0 else 1
 
     return sorted(blocks, key=cmp_to_key(compare_fallback))
 
@@ -190,7 +175,7 @@ def filter_nested_blocks(blocks: list) -> list:
             if ix1 > ix0 and iy1 > iy0:
                 inter_area = (ix1 - ix0) * (iy1 - iy0)
                 # Si el 90% o más de 'a' está dentro de 'b'
-                if inter_area >= 0.9 * area_a:
+                if inter_area >= 0.8 * area_a:
                     to_remove.add(i)
                     break
 
@@ -213,7 +198,7 @@ def sort_blocks_by_columns(blocks: list) -> str:
     if not text_blocks:
         return ""
 
-    # Eliminar bloques anidados geométricamente
+    # Eliminar bloques contenidos dentro de otros bloques mayores para evitar duplicaciones
     clean_blocks = filter_nested_blocks(text_blocks)
 
     # Ordenar los bloques usando el algoritmo de Recursive X-Y Cut
