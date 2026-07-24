@@ -1,5 +1,5 @@
 # Configuración básica de Ruff para el backend
-line-length = 88
+line-length = 120
 target-version = "py311"
 
 [lint]
@@ -11,7 +11,10 @@ select = [
     "C",  # flake8-comprehensions
     "B",  # flake8-bugbear
 ]
-ignore = []
+ignore = [
+    "B008",  # Do not perform function call File/Query in argument defaults (común en FastAPI)
+    "C901",  # McCabe complexity check (desactivado para algoritmos recursivos complejos)
+]
 
 [format]
 quote-style = "double"
