@@ -91,8 +91,11 @@ class VectorDB:
         doc_table.add([doc])
 
         # Insertar chunks
-        logger.info(f"Persistiendo {len(chunks)} chunks para el documento {doc.document_id}...")
-        chunk_table.add(chunks)
+        if chunks:
+            logger.info(f"Persistiendo {len(chunks)} chunks para el documento {doc.document_id}...")
+            chunk_table.add(chunks)
+        else:
+            logger.info(f"No hay chunks para persistir para el documento {doc.document_id}.")
 
     @classmethod
     def _get_table_names(cls, db) -> list[str]:
@@ -201,8 +204,8 @@ class VectorDB:
         return True
 
     @classmethod
-    def search_chunks(cls, query_vector: list[float], limit: int = 5) -> list[dict]:
-        """Realiza una búsqueda semántica de vecinos más cercanos en la tabla de chunks."""
+    def search_chunks(cls, query_vector: list[float], limit: int = 5, where: str | None = None) -> list[dict]:
+        """Realiza una búsqueda semántica de vecinos más cercanos en la tabla de chunks, con filtro where opcional."""
         db = cls.get_db()
         table_names = cls._get_table_names(db)
         if "chunks" not in table_names:
@@ -210,7 +213,10 @@ class VectorDB:
 
         chunk_table = db.open_table("chunks")
         # Realiza la búsqueda vectorial en LanceDB
-        results = chunk_table.search(query_vector).limit(limit).to_list()
+        search_query = chunk_table.search(query_vector)
+        if where:
+            search_query = search_query.where(where)
+        results = search_query.limit(limit).to_list()
 
         # Formatear resultados
         formatted_results = []

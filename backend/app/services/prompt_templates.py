@@ -45,3 +45,41 @@ def compile_tutor_prompt(context_chunks: list[dict]) -> str:
         context_str = "\n\n".join(context_parts)
 
     return SYSTEM_PROMPT_TUTOR.format(context=context_str)
+
+
+SYSTEM_PROMPT_EXPLAIN = """Eres un asistente de lectura científica y académica.
+Tu tarea es explicar de forma clara, directa y concisa el fragmento de texto seleccionado por el usuario.
+
+Sigue estas directrices:
+1. Responde de forma resumida e informativa, optimizada para una ventana emergente o tooltip rápida.
+2. No uses andamiaje pedagógico (ZDP) ni plantees contra-preguntas al final,
+   ya que el usuario está en medio de la lectura del documento.
+3. Utiliza el contexto adjunto del documento si es útil para aclarar términos ambiguos o referencias internas.
+
+[CONTEXTO]
+{context}
+"""
+
+SYSTEM_PROMPT_TRANSLATE = """Eres un traductor experto en textos científicos y académicos.
+Tu única tarea es traducir el fragmento de texto seleccionado al idioma de destino solicitado: '{target_language}'.
+
+Directrices:
+1. Mantén la precisión técnica, la jerga científica y el significado conceptual original.
+2. Retorna ÚNICAMENTE la traducción limpia del fragmento.
+   No agregues introducciones, notas al pie ni comentarios explicativos.
+"""
+
+
+def compile_explain_prompt(context_chunks: list[dict]) -> str:
+    """Compila el prompt del sistema para explicación inyectando el contexto de los chunks recuperados."""
+    if not context_chunks:
+        context_str = "No hay contexto disponible del documento para esta consulta."
+    else:
+        context_parts = []
+        for i, chunk in enumerate(context_chunks):
+            section_info = f" (Sección: {chunk['section']})" if chunk.get("section") else ""
+            pages_info = f" (Páginas: {chunk['pages']})" if chunk.get("pages") else f" (Página: {chunk['page_number']})"
+            context_parts.append(f"--- Fragmento {i + 1}{section_info}{pages_info} ---\n{chunk['text']}")
+        context_str = "\n\n".join(context_parts)
+
+    return SYSTEM_PROMPT_EXPLAIN.format(context=context_str)

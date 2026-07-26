@@ -119,6 +119,42 @@ class OpenRouterService:
                 ) from e
 
     @classmethod
+    async def get_chat_completion(cls, messages: list[dict]) -> str:
+        """Obtiene una respuesta completa de chat completions (no streaming) desde OpenRouter."""
+        headers = cls._get_headers()
+        data = {
+            "model": settings.LLM_MODEL,
+            "messages": messages,
+            "stream": False,
+        }
+
+        url = "https://openrouter.ai/api/v1/chat/completions"
+        logger.info(f"Enviando solicitud de chat completion a OpenRouter ({settings.LLM_MODEL})...")
+
+        async with httpx.AsyncClient() as client:
+            try:
+                response = await client.post(url, headers=headers, json=data, timeout=60.0)
+                if response.status_code != 200:
+                    logger.error(f"Error de OpenRouter Chat Completion API: {response.status_code} - {response.text}")
+                    raise HTTPException(
+                        status_code=response.status_code,
+                        detail=f"OpenRouter Chat Completion API error: {response.text}",
+                    )
+
+                res_data = response.json()
+                choices = res_data.get("choices", [])
+                if choices:
+                    content = choices[0].get("message", {}).get("content", "")
+                    return content.strip()
+                return ""
+            except httpx.RequestError as e:
+                logger.error(f"Error de red contactando OpenRouter Chat: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_502_BAD_GATEWAY,
+                    detail=f"Error de red contactando la API de OpenRouter para Chat completions: {e}",
+                ) from e
+
+    @classmethod
     async def rerank(cls, query: str, documents: list[str], top_n: int) -> list[dict]:
         """Llama al endpoint de Reranking de OpenRouter para ordenar documentos por relevancia."""
         if not documents:
