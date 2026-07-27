@@ -40,7 +40,7 @@ Esta tabla registra el estado actual de cada especificación según el ciclo de 
 | **Spec 5** | Servicios de Acción Contextual | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí |
 | **Spec 6** | Visor Base Okular | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí |
 | **Spec 7** | Entorno de Integración Web | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí |
-| **Spec 8** | Interfaz de Chat y Referencias | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí | ❌ No |
+| **Spec 8** | Interfaz de Chat y Referencias | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí |
 | **Spec 9** | Biblioteca: Tabla y Grafo | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
 | **Spec 10**| Atajos de Selección del Visor | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
 
