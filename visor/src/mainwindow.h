@@ -24,6 +24,7 @@ public:
 
 private slots:
     void handleJSMessage(const QString &message);
+    void scrollToPage(int pageNumber);
 
 private:
     void setupVisor();

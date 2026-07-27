@@ -7,11 +7,19 @@ declare global {
     qtBridge?: {
       // Slots expuestos desde C++ (retornan Promesas en JS/TS)
       postMessage: (msg: string) => Promise<void>;
+      getFileHash: (filePath: string) => Promise<string>;
+      ingestDocument: (filePath: string, documentId: string) => Promise<void>;
+      scrollToPage: (pageNumber: number) => Promise<void>;
       
       // Señales expuestas desde C++ (se conectan usando .connect)
       fileLoaded: {
-        connect: (callback: (filePath: string) => void) => void;
-        disconnect: (callback: (filePath: string) => void) => void;
+        connect: (callback: (filePath: string, documentId: string) => void) => void;
+        disconnect: (callback: (filePath: string, documentId: string) => void) => void;
+      };
+      
+      ingestStatus: {
+        connect: (callback: (documentId: string, status: string, progress: number, error: string) => void) => void;
+        disconnect: (callback: (documentId: string, status: string, progress: number, error: string) => void) => void;
       };
     };
     QWebChannel?: any;

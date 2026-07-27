@@ -47,6 +47,7 @@ void MainWindow::setupVisor()
     
     // Conectar el mensaje recibido de JS a un slot de MainWindow
     connect(m_bridge, &JSBridge::messageReceived, this, &MainWindow::handleJSMessage);
+    connect(m_bridge, &JSBridge::pageNavigationRequested, this, &MainWindow::scrollToPage);
 
     // --- PESTAÑA 1: DOCUMENTO Y CHAT ---
     QWidget *tabReader = new QWidget(m_tabWidget);
@@ -105,8 +106,12 @@ void MainWindow::openDocument(const QString &filePath)
     m_currentFilePath = filePath;
     if (m_part && !filePath.isEmpty()) {
         m_part->openUrl(QUrl::fromLocalFile(filePath));
+        
+        // Calcular el hash SHA-256 del archivo local
+        QString documentId = m_bridge->getFileHash(filePath);
+        
         // Emitir señal al puente para notificar a la interfaz de React
-        emit m_bridge->fileLoaded(filePath);
+        emit m_bridge->fileLoaded(filePath, documentId);
     }
 }
 
@@ -114,4 +119,12 @@ void MainWindow::handleJSMessage(const QString &message)
 {
     qInfo() << "MainWindow: Recibido mensaje desde JS:" << message;
     statusBar()->showMessage(tr("Mensaje recibido de JS: %1").arg(message), 5000);
+}
+
+void MainWindow::scrollToPage(int pageNumber)
+{
+    if (m_part && !m_currentFilePath.isEmpty()) {
+        qInfo() << "MainWindow: Desplazando visor a página:" << pageNumber;
+        m_part->openUrl(QUrl::fromLocalFile(m_currentFilePath) + QString("#%1").arg(pageNumber));
+    }
 }

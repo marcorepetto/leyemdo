@@ -12,11 +12,26 @@ public:
 public slots:
     // Slot invocado desde JavaScript
     void postMessage(const QString &message);
+    
+    // Retorna el hash SHA-256 de un archivo local
+    QString getFileHash(const QString &filePath);
+    
+    // Inicia la carga asíncrona de un archivo local
+    void ingestDocument(const QString &filePath, const QString &documentId);
+    
+    // Solicita la navegación a una página
+    void scrollToPage(int pageNumber);
 
 signals:
     // Señal emitida a C++ cuando llega un mensaje de JS
     void messageReceived(const QString &message);
 
-    // Señal enviada a JS cuando se abre un PDF en C++
-    void fileLoaded(const QString &filePath);
+    // Señal enviada a JS cuando se abre un PDF en C++ (incluye el documentId/hash)
+    void fileLoaded(const QString &filePath, const QString &documentId);
+
+    // Señal de progreso de ingesta enviada a JS
+    void ingestStatus(const QString &documentId, const QString &status, double progress, const QString &error);
+
+    // Señal emitida internamente a MainWindow para cambiar de página
+    void pageNavigationRequested(int pageNumber);
 };
