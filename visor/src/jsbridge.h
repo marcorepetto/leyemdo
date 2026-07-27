@@ -51,6 +51,9 @@ signals:
     void openDocumentRequested(const QString &filePath);
     void currentTabChangeRequested(int tabIndex);
 
+    // Señal que envía la selección de texto a React
+    void textSelectedForAction(const QString &text, const QString &actionType);
+
 private:
     QString m_currentFilePath;
     QString m_currentDocumentId;

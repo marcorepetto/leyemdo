@@ -101,6 +101,9 @@ void MainWindow::setupVisor()
     // Configurar ventana
     setWindowTitle(tr("Lector PDF Inteligente"));
     resize(1200, 800);
+
+    // Configurar atajos del visor
+    setupShortcuts();
 }
 
 void MainWindow::openDocument(const QString &filePath)
@@ -142,4 +145,63 @@ void MainWindow::setCurrentTab(int tabIndex)
         qInfo() << "MainWindow: Cambiando pestaña activa a:" << tabIndex;
         m_tabWidget->setCurrentIndex(tabIndex);
     }
+}
+
+#include <QClipboard>
+#include <QGuiApplication>
+#include <QAction>
+
+void MainWindow::setupShortcuts()
+{
+    // Alt+E: Explicar selección
+    QAction *explainAction = new QAction(this);
+    explainAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_E));
+    connect(explainAction, &QAction::triggered, this, [this]() {
+        handleShortcutTriggered(QStringLiteral("explain"));
+    });
+    addAction(explainAction);
+
+    // Alt+R: Resumir selección
+    QAction *summarizeAction = new QAction(this);
+    summarizeAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_R));
+    connect(summarizeAction, &QAction::triggered, this, [this]() {
+        handleShortcutTriggered(QStringLiteral("summarize"));
+    });
+    addAction(summarizeAction);
+
+    // Alt+T: Copiar selección al chat
+    QAction *askAction = new QAction(this);
+    askAction->setShortcut(QKeySequence(Qt::ALT | Qt::Key_T));
+    connect(askAction, &QAction::triggered, this, [this]() {
+        handleShortcutTriggered(QStringLiteral("ask"));
+    });
+    addAction(askAction);
+
+    qInfo() << "MainWindow: Atajos Alt+E (Explicar), Alt+R (Resumir), Alt+T (Copiar al chat) registrados.";
+}
+
+void MainWindow::handleShortcutTriggered(const QString &actionType)
+{
+    if (!m_part) {
+        return;
+    }
+
+    // Forzar la acción nativa de copiar de Okular KPart para transferir la selección al portapapeles
+    QAction *okularCopy = m_part->action(QStringLiteral("edit_copy"));
+    if (okularCopy) {
+        okularCopy->trigger();
+    } else {
+        qWarning() << "MainWindow: No se encontró la acción nativa 'edit_copy' en Okular KPart.";
+    }
+
+    // Extraer texto del portapapeles
+    QString text = QGuiApplication::clipboard()->text().trimmed();
+
+    if (text.isEmpty()) {
+        statusBar()->showMessage(tr("Selecciona texto en el PDF primero."), 3000);
+        return;
+    }
+
+    qInfo() << "MainWindow: Enviando atajo" << actionType << "con texto:" << text.left(40) << "...";
+    emit m_bridge->textSelectedForAction(text, actionType);
 }

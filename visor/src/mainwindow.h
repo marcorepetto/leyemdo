@@ -29,6 +29,8 @@ private slots:
 
 private:
     void setupVisor();
+    void setupShortcuts();
+    void handleShortcutTriggered(const QString &actionType);
 
     KParts::ReadOnlyPart *m_part;
     QTabWidget *m_tabWidget;

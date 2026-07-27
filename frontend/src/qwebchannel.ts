@@ -17,6 +17,15 @@ declare global {
       importDocumentFromReact: () => Promise<void>;
       
       // Señales expuestas desde C++ (se conectan usando .connect)
+      pageNavigationRequested: {
+        connect: (callback: (pageNumber: number) => void) => void;
+        disconnect: (callback: (pageNumber: number) => void) => void;
+      };
+      textSelectedForAction: {
+        connect: (callback: (text: string, actionType: string) => void) => void;
+        disconnect: (callback: (text: string, actionType: string) => void) => void;
+      };
+      
       fileLoaded: {
         connect: (callback: (filePath: string, documentId: string) => void) => void;
         disconnect: (callback: (filePath: string, documentId: string) => void) => void;

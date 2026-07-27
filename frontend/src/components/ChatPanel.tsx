@@ -28,6 +28,7 @@ export function ChatPanel({ documentId, filePath }: ChatPanelProps) {
   } | null>(null);
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Cargar historial y extraer bibliografía al iniciar
   useEffect(() => {
@@ -109,13 +110,10 @@ export function ChatPanel({ documentId, filePath }: ChatPanelProps) {
     }
   };
 
-  const handleSend = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputText.trim() || isLoading) return;
+  const sendMessage = async (messageContent: string) => {
+    if (isLoading || !messageContent.trim()) return;
 
-    const userMessage = inputText.trim();
-    setInputText("");
-    setMessages((prev) => [...prev, { role: "user", content: userMessage }]);
+    setMessages((prev) => [...prev, { role: "user", content: messageContent }]);
     setIsLoading(true);
 
     // Inicializar burbuja vacía para la respuesta de la IA
@@ -127,7 +125,7 @@ export function ChatPanel({ documentId, filePath }: ChatPanelProps) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           document_id: documentId,
-          message: userMessage,
+          message: messageContent,
         }),
       });
 
@@ -205,6 +203,42 @@ export function ChatPanel({ documentId, filePath }: ChatPanelProps) {
       setIsLoading(false);
     }
   };
+
+  const handleSend = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!inputText.trim() || isLoading) return;
+
+    const userMessage = inputText.trim();
+    setInputText("");
+    await sendMessage(userMessage);
+  };
+
+  // Suscribirse a los atajos de teclado del visor C++
+  useEffect(() => {
+    const handleShortcut = (text: string, actionType: string) => {
+      console.log(`React IPC: Atajo recibido (${actionType}) con texto: ${text.substring(0, 30)}...`);
+      if (actionType === "explain") {
+        sendMessage(`Explícame el siguiente fragmento del documento:\n\n> ${text}`);
+      } else if (actionType === "summarize") {
+        sendMessage(`Resume de manera concisa el siguiente fragmento del documento:\n\n> ${text}`);
+      } else if (actionType === "ask") {
+        setInputText(text);
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 50);
+      }
+    };
+
+    if (window.qtBridge) {
+      window.qtBridge.textSelectedForAction.connect(handleShortcut);
+    }
+
+    return () => {
+      if (window.qtBridge) {
+        window.qtBridge.textSelectedForAction.disconnect(handleShortcut);
+      }
+    };
+  }, [documentId, isLoading]);
 
   const handleCitationClick = (e: React.MouseEvent, citId: string) => {
     e.preventDefault();
@@ -314,6 +348,7 @@ export function ChatPanel({ documentId, filePath }: ChatPanelProps) {
 
       <form className="chat-input-area" onSubmit={handleSend}>
         <input
+          ref={inputRef}
           type="text"
           value={inputText}
           onChange={(e) => setInputText(e.target.value)}
