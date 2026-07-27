@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 
 interface ChatPanelProps {
   documentId: string;
@@ -140,18 +142,21 @@ export function ChatPanel({ documentId, filePath }: ChatPanelProps) {
       }
 
       let accumulatedContent = "";
+      let buffer = "";
 
       while (true) {
         const { value, done } = await reader.read();
         if (done) break;
 
-        const rawChunk = decoder.decode(value, { stream: true });
-        
-        // Parsear formato SSE: "data: token\n\n"
-        const lines = rawChunk.split("\n");
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n");
+        buffer = lines.pop() || "";
+
         for (const line of lines) {
-          if (line.startsWith("data: ")) {
-            const token = line.slice(6);
+          const cleanLine = line.endsWith("\r") ? line.slice(0, -1) : line;
+          if (cleanLine.startsWith("data: ")) {
+            const token = cleanLine.slice(6);
+            if (token === "[DONE]") continue;
             accumulatedContent += token;
             
             // Actualizar el último mensaje (assistant) en tiempo real
@@ -234,6 +239,8 @@ export function ChatPanel({ documentId, filePath }: ChatPanelProps) {
               <div className="chat-avatar">{msg.role === "user" ? "Tú" : "IA"}</div>
               <div className="chat-bubble">
                 <ReactMarkdown
+                  remarkPlugins={[remarkMath]}
+                  rehypePlugins={[rehypeKatex]}
                   components={{
                     a: ({ href, children }) => {
                       if (href && href.startsWith("citation:")) {
