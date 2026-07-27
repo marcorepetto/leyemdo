@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
+import remarkGfm from "remark-gfm";
 
 interface ChatPanelProps {
   documentId: string;
@@ -239,7 +240,7 @@ export function ChatPanel({ documentId, filePath }: ChatPanelProps) {
               <div className="chat-avatar">{msg.role === "user" ? "Tú" : "IA"}</div>
               <div className="chat-bubble">
                 <ReactMarkdown
-                  remarkPlugins={[remarkMath]}
+                  remarkPlugins={[remarkMath, remarkGfm]}
                   rehypePlugins={[rehypeKatex]}
                   components={{
                     a: ({ href, children }) => {
