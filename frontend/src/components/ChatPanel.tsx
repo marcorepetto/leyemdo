@@ -144,6 +144,7 @@ export function ChatPanel({ documentId, filePath }: ChatPanelProps) {
 
       let accumulatedContent = "";
       let buffer = "";
+      let currentEventData: string[] = [];
 
       while (true) {
         const { value, done } = await reader.read();
@@ -155,22 +156,36 @@ export function ChatPanel({ documentId, filePath }: ChatPanelProps) {
 
         for (const line of lines) {
           const cleanLine = line.endsWith("\r") ? line.slice(0, -1) : line;
-          if (cleanLine.startsWith("data: ")) {
-            const token = cleanLine.slice(6);
-            if (token === "[DONE]") continue;
-            accumulatedContent += token;
-            
-            // Actualizar el último mensaje (assistant) en tiempo real
-            setMessages((prev) => {
-              const updated = [...prev];
-              if (updated.length > 0) {
-                updated[updated.length - 1] = {
-                  role: "assistant",
-                  content: accumulatedContent,
-                };
+          
+          if (cleanLine.startsWith("data:")) {
+            let dataValue = "";
+            if (cleanLine.startsWith("data: ")) {
+              dataValue = cleanLine.slice(6);
+            } else {
+              dataValue = cleanLine.slice(5);
+            }
+            currentEventData.push(dataValue);
+          } else if (cleanLine === "") {
+            // Línea vacía indica el final de un bloque de evento SSE
+            if (currentEventData.length > 0) {
+              const eventText = currentEventData.join("\n");
+              if (eventText !== "[DONE]") {
+                accumulatedContent += eventText;
+                
+                // Actualizar el último mensaje (assistant) en tiempo real
+                setMessages((prev) => {
+                  const updated = [...prev];
+                  if (updated.length > 0) {
+                    updated[updated.length - 1] = {
+                      role: "assistant",
+                      content: accumulatedContent,
+                    };
+                  }
+                  return updated;
+                });
               }
-              return updated;
-            });
+              currentEventData = [];
+            }
           }
         }
       }
