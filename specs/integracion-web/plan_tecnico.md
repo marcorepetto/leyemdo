@@ -44,7 +44,7 @@ find_package(KF6Parts REQUIRED)
 find_package(KF6XmlGui REQUIRED)
 find_package(KF6I18n REQUIRED)
 find_package(KF6CoreAddons REQUIRED)
-find_package(Okular::Core REQUIRED)
+find_package(Okular6 REQUIRED)
 
 # Enlazar Bibliotecas
 target_link_libraries(lector-visor
