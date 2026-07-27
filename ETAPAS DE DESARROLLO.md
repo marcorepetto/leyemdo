@@ -38,7 +38,7 @@ Esta tabla registra el estado actual de cada especificación según el ciclo de 
 | **Spec 3** | Base de Datos Vectorial | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí |
 | **Spec 4** | Integración LLM & ZDP | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí |
 | **Spec 5** | Servicios de Acción Contextual | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí |
-| **Spec 6** | Visor Base Okular | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí | ❌ No |
+| **Spec 6** | Visor Base Okular | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí | ✔️ Sí |
 | **Spec 7** | Entorno de Integración Web | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
 | **Spec 8** | Interfaz de Chat y Referencias | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
 | **Spec 9** | Biblioteca: Tabla y Grafo | ❌ No | ❌ No | ❌ No | ❌ No | ❌ No |
