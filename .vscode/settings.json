@@ -3,5 +3,6 @@
   "python.analysis.extraPaths": [
     "${workspaceFolder}/backend"
   ],
-  "python-envs.pythonProjects": []
+  "python-envs.pythonProjects": [],
+  "cmake.sourceDirectory": "/home/mrepetto/Documentos/lectura/visor"
 }
