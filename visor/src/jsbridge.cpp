@@ -132,3 +132,32 @@ void JSBridge::setCurrentTab(int tabIndex)
     qInfo() << "IPC: Cambio de pestaña solicitado desde React:" << tabIndex;
     emit currentTabChangeRequested(tabIndex);
 }
+
+#include <QFileDialog>
+
+void JSBridge::importDocumentFromReact()
+{
+    qInfo() << "IPC: Abriendo diálogo de selección para importar PDF...";
+    QString filePath = QFileDialog::getOpenFileName(nullptr,
+                                                    tr("Importar PDF a Biblioteca"),
+                                                    QString(),
+                                                    tr("Archivos PDF (*.pdf)"));
+    if (filePath.isEmpty()) {
+        qInfo() << "IPC: Importación cancelada por el usuario.";
+        return;
+    }
+
+    QString documentId = getFileHash(filePath);
+    if (documentId.isEmpty()) {
+        qWarning() << "IPC: No se pudo generar hash para el archivo:" << filePath;
+        return;
+    }
+
+    // Registrar mapeo local
+    QSettings settings(QStringLiteral("LectorInteligente"), QStringLiteral("Visor"));
+    settings.setValue(QString("paths/%1").arg(documentId), filePath);
+    qInfo() << "IPC: Mapeo guardado para importación:" << documentId << "->" << filePath;
+
+    // Disparar proceso de ingesta asíncrono
+    ingestDocument(filePath, documentId);
+}

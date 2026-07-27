@@ -14,6 +14,7 @@ declare global {
       currentDocumentId: () => Promise<string>;
       openDocumentFromReact: (documentId: string) => Promise<void>;
       setCurrentTab: (tabIndex: number) => Promise<void>;
+      importDocumentFromReact: () => Promise<void>;
       
       // Señales expuestas desde C++ (se conectan usando .connect)
       fileLoaded: {

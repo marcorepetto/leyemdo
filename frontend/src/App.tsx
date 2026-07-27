@@ -78,6 +78,11 @@ function App() {
           setIsIndexed(true);
           // Recargar biblioteca tras la ingesta exitosa
           fetchLibraryData();
+          // Quitar el overlay de progreso tras 1.5 segundos
+          setTimeout(() => {
+            setIngestState("idle");
+            setIngestProgress(0);
+          }, 1500);
         } else if (status === "error") {
           setIngestState("error");
           setIngestError(error);
@@ -157,6 +162,12 @@ function App() {
       setIngestState("processing");
       setIngestProgress(0);
       window.qtBridge.ingestDocument(currentFile, documentId);
+    }
+  };
+
+  const handleImportDoc = () => {
+    if (window.qtBridge) {
+      window.qtBridge.importDocumentFromReact();
     }
   };
 
@@ -367,6 +378,9 @@ function App() {
           <span className={`status-badge ${isConnected ? "online" : "offline"}`}>
             {isConnected ? "Conectado" : "Desconectado"}
           </span>
+          <button className="primary-btn import-btn" onClick={handleImportDoc} style={{ marginLeft: "12px", fontSize: "0.8rem", padding: "6px 12px" }}>
+            📥 Importar PDF
+          </button>
         </div>
         <div className="header-controls">
           <input
@@ -589,6 +603,50 @@ function App() {
           </div>
         </section>
       </main>
+
+      {/* Overlays de Ingesta/Importación desde la Biblioteca */}
+      {ingestState === "processing" && (
+        <div className="import-overlay">
+          <div className="ingest-card">
+            <h3>Importando PDF...</h3>
+            <p>Procesando y generando base de datos vectorial para tu archivo en segundo plano.</p>
+            <div className="progress-container">
+              <div 
+                className="progress-bar" 
+                style={{ width: `${Math.round(ingestProgress * 100)}%` }} 
+              />
+            </div>
+            <span className="progress-label">
+              Progreso: {Math.round(ingestProgress * 100)}%
+            </span>
+          </div>
+        </div>
+      )}
+
+      {ingestState === "completed" && (
+        <div className="import-overlay">
+          <div className="ingest-card">
+            <h3 style={{ color: "#34d399" }}>¡Importación Exitosa!</h3>
+            <p>El documento ha sido indexado y añadido a tu biblioteca digital.</p>
+            <div className="progress-container">
+              <div className="progress-bar" style={{ width: "100%", background: "#34d399" }} />
+            </div>
+            <span className="progress-label" style={{ color: "#34d399" }}>Completado 100%</span>
+          </div>
+        </div>
+      )}
+
+      {ingestState === "error" && (
+        <div className="import-overlay">
+          <div className="ingest-card">
+            <h3 style={{ color: "#f87171" }}>Error de Importación</h3>
+            <div className="error-message">{ingestError}</div>
+            <button className="primary-btn" style={{ marginTop: "16px" }} onClick={() => setIngestState("idle")}>
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 

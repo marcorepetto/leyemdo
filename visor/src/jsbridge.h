@@ -32,6 +32,7 @@ public slots:
     // Slots llamados desde la biblioteca de React
     void openDocumentFromReact(const QString &documentId);
     void setCurrentTab(int tabIndex);
+    void importDocumentFromReact();
 
 signals:
     // Señal emitida a C++ cuando llega un mensaje de JS
