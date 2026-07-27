@@ -22,6 +22,13 @@ public slots:
     // Solicita la navegación a una página
     void scrollToPage(int pageNumber);
 
+    // Métodos invocables desde JS para obtener el archivo actual en carga inicial (evita race conditions)
+    QString currentFilePath() const;
+    QString currentDocumentId() const;
+
+    // Método C++ para actualizar el archivo activo
+    void setCurrentFile(const QString &filePath, const QString &documentId);
+
 signals:
     // Señal emitida a C++ cuando llega un mensaje de JS
     void messageReceived(const QString &message);
@@ -34,4 +41,8 @@ signals:
 
     // Señal emitida internamente a MainWindow para cambiar de página
     void pageNavigationRequested(int pageNumber);
+
+private:
+    QString m_currentFilePath;
+    QString m_currentDocumentId;
 };

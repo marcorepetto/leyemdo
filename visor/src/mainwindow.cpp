@@ -110,6 +110,9 @@ void MainWindow::openDocument(const QString &filePath)
         // Calcular el hash SHA-256 del archivo local
         QString documentId = m_bridge->getFileHash(filePath);
         
+        // Guardar en el puente para evitar race condition en carga inicial
+        m_bridge->setCurrentFile(filePath, documentId);
+        
         // Emitir señal al puente para notificar a la interfaz de React
         emit m_bridge->fileLoaded(filePath, documentId);
     }

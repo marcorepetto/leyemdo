@@ -88,3 +88,19 @@ void JSBridge::scrollToPage(int pageNumber)
     qInfo() << "IPC: Navegación de página solicitada:" << pageNumber;
     emit pageNavigationRequested(pageNumber);
 }
+
+QString JSBridge::currentFilePath() const
+{
+    return m_currentFilePath;
+}
+
+QString JSBridge::currentDocumentId() const
+{
+    return m_currentDocumentId;
+}
+
+void JSBridge::setCurrentFile(const QString &filePath, const QString &documentId)
+{
+    m_currentFilePath = filePath;
+    m_currentDocumentId = documentId;
+}

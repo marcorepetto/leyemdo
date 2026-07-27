@@ -10,6 +10,8 @@ declare global {
       getFileHash: (filePath: string) => Promise<string>;
       ingestDocument: (filePath: string, documentId: string) => Promise<void>;
       scrollToPage: (pageNumber: number) => Promise<void>;
+      currentFilePath: () => Promise<string>;
+      currentDocumentId: () => Promise<string>;
       
       // Señales expuestas desde C++ (se conectan usando .connect)
       fileLoaded: {

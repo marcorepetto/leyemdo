@@ -22,7 +22,7 @@ function App() {
     window.addEventListener("popstate", handleLocationChange);
 
     // Inicializar puente IPC
-    initWebChannel((bridge) => {
+    initWebChannel(async (bridge) => {
       setIsConnected(true);
       
       // Conectar la señal de archivo cargado (filePath + documentId/hash)
@@ -52,6 +52,19 @@ function App() {
           setIngestError(error);
         }
       });
+
+      // Consulta de carga inicial para evitar race conditions
+      try {
+        const filePath = await bridge.currentFilePath();
+        const docId = await bridge.currentDocumentId();
+        if (filePath && filePath !== "Ninguno" && docId) {
+          setCurrentFile(filePath);
+          setDocumentId(docId);
+          checkIfIndexed(docId);
+        }
+      } catch (err) {
+        console.error("Error cargando el archivo inicial desde el puente:", err);
+      }
     });
 
     return () => {
