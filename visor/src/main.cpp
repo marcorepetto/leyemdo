@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
     aboutData.setupCommandLine(&parser);
     parser.addPositionalArgument(QStringLiteral("file"), QObject::tr("Documento PDF a abrir."));
     parser.process(app);
-    aboutData.registerWithCommandLineParser(&parser);
+    aboutData.processCommandLine(&parser);
 
     MainWindow window;
     window.show();

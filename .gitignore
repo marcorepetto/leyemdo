@@ -16,3 +16,11 @@ backend/.env
 
 # Local data (Database/Embeddings)
 backend/data/
+
+# C++ build artifacts
+build/
+**/build/
+*.o
+*.a
+*.so
+lector-visor

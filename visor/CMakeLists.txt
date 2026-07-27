@@ -9,7 +9,10 @@ set(CMAKE_AUTORCC ON)
 
 # Buscar Dependencias
 find_package(Qt6 COMPONENTS Widgets Core REQUIRED)
-find_package(KF6 COMPONENTS Parts XmlGui I18n REQUIRED)
+find_package(KF6Parts REQUIRED)
+find_package(KF6XmlGui REQUIRED)
+find_package(KF6I18n REQUIRED)
+find_package(KF6CoreAddons REQUIRED)
 find_package(Okular6 REQUIRED)
 
 # Agregar Ejecutable
@@ -27,5 +30,6 @@ target_link_libraries(lector-visor
     KF6::Parts
     KF6::XmlGui
     KF6::I18n
-    Okular6
+    KF6::CoreAddons
+    Okular::Core
 )

@@ -40,7 +40,10 @@ set(CMAKE_AUTORCC ON)
 
 # Buscar Dependencias
 find_package(Qt6 COMPONENTS Widgets Core REQUIRED)
-find_package(KF6 COMPONENTS Parts XmlGui I18n REQUIRED)
+find_package(KF6Parts REQUIRED)
+find_package(KF6XmlGui REQUIRED)
+find_package(KF6I18n REQUIRED)
+find_package(KF6CoreAddons REQUIRED)
 find_package(Okular6 REQUIRED)
 
 # Agregar Ejecutable
@@ -58,7 +61,8 @@ target_link_libraries(lector-visor
     KF6::Parts
     KF6::XmlGui
     KF6::I18n
-    Okular6
+    KF6::CoreAddons
+    Okular::Core
 )
 ```
 
@@ -69,21 +73,21 @@ target_link_libraries(lector-visor
 * Instancia y muestra `MainWindow`.
 
 ### C. Definición de la Ventana Principal (`visor/src/mainwindow.h`)
-* Hereda de `KXmlGuiWindow` en lugar de `QMainWindow` para permitir que el KPart de Okular inserte de forma transparente sus menús y barras de herramientas dentro de nuestra ventana principal.
+* Hereda de `KParts::MainWindow` para permitir que el KPart de Okular inserte de forma transparente sus menús y barras de herramientas dentro de nuestra ventana principal.
 * Declara el puntero a `KParts::ReadOnlyPart`.
 * Declara la función para abrir un documento.
 
 ```cpp
 #pragma once
 
-#include <KXmlGuiWindow>
+#include <KParts/MainWindow>
 #include <QUrl>
 
 namespace KParts {
     class ReadOnlyPart;
 }
 
-class MainWindow : public KXmlGuiWindow
+class MainWindow : public KParts::MainWindow
 {
     Q_OBJECT
 
@@ -103,7 +107,7 @@ private:
 ### D. Implementación de la Ventana (`visor/src/mainwindow.cpp`)
 * Utiliza `KParts::PartLoader::instantiatePartForMimeType` para solicitar el componente asociado a `application/pdf`.
 * Inserta el widget del KPart (`m_part->widget()`) como el widget central.
-* Llama a `setupGUI(Keys | ToolBar | MenuBar | StatusBar)` para fusionar las acciones de Okular en nuestra ventana.
+* Llama a `setupGUI()` y `createGUI(m_part)` para fusionar las acciones de Okular en nuestra ventana.
 * Llama a `m_part->openUrl(QUrl::fromLocalFile(filePath))` para cargar el documento PDF.
 
 ---

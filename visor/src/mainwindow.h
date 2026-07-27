@@ -1,13 +1,13 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
-#include <KXmlGuiWindow>
+#include <KParts/MainWindow>
 
 namespace KParts {
     class ReadOnlyPart;
 }
 
-class MainWindow : public KXmlGuiWindow
+class MainWindow : public KParts::MainWindow
 {
     Q_OBJECT
 

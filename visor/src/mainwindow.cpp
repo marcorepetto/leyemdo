@@ -6,7 +6,7 @@
 #include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent)
-    : KXmlGuiWindow(parent)
+    : KParts::MainWindow(parent)
     , m_part(nullptr)
 {
     setupVisor();
@@ -35,7 +35,7 @@ void MainWindow::setupVisor()
         layout->addWidget(m_part->widget());
 
         // Inicializar la GUI básica de la ventana principal y fusionar el KPart
-        setupGUI(ToolBar | MenuBar | StatusBar);
+        setupGUI();
         createGUI(m_part);
         
         // Configurar título por defecto
