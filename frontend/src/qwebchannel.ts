@@ -12,6 +12,8 @@ declare global {
       scrollToPage: (pageNumber: number) => Promise<void>;
       currentFilePath: () => Promise<string>;
       currentDocumentId: () => Promise<string>;
+      openDocumentFromReact: (documentId: string) => Promise<void>;
+      setCurrentTab: (tabIndex: number) => Promise<void>;
       
       // Señales expuestas desde C++ (se conectan usando .connect)
       fileLoaded: {

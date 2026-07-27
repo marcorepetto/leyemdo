@@ -29,6 +29,10 @@ public slots:
     // Método C++ para actualizar el archivo activo
     void setCurrentFile(const QString &filePath, const QString &documentId);
 
+    // Slots llamados desde la biblioteca de React
+    void openDocumentFromReact(const QString &documentId);
+    void setCurrentTab(int tabIndex);
+
 signals:
     // Señal emitida a C++ cuando llega un mensaje de JS
     void messageReceived(const QString &message);
@@ -41,6 +45,10 @@ signals:
 
     // Señal emitida internamente a MainWindow para cambiar de página
     void pageNavigationRequested(int pageNumber);
+
+    // Señales emitidas a MainWindow desde la biblioteca
+    void openDocumentRequested(const QString &filePath);
+    void currentTabChangeRequested(int tabIndex);
 
 private:
     QString m_currentFilePath;

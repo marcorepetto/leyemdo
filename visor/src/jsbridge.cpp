@@ -99,8 +99,36 @@ QString JSBridge::currentDocumentId() const
     return m_currentDocumentId;
 }
 
+#include <QSettings>
+
 void JSBridge::setCurrentFile(const QString &filePath, const QString &documentId)
 {
     m_currentFilePath = filePath;
     m_currentDocumentId = documentId;
+    
+    if (!filePath.isEmpty() && !documentId.isEmpty()) {
+        QSettings settings(QStringLiteral("LectorInteligente"), QStringLiteral("Visor"));
+        settings.setValue(QString("paths/%1").arg(documentId), filePath);
+        qInfo() << "IPC: Mapeo de ruta local guardado para hash:" << documentId << "->" << filePath;
+    }
+}
+
+void JSBridge::openDocumentFromReact(const QString &documentId)
+{
+    qInfo() << "IPC: Solicitada apertura de archivo desde React para ID:" << documentId;
+    QSettings settings(QStringLiteral("LectorInteligente"), QStringLiteral("Visor"));
+    QString filePath = settings.value(QString("paths/%1").arg(documentId)).toString();
+    
+    if (!filePath.isEmpty() && QFile::exists(filePath)) {
+        qInfo() << "IPC: Encontrado archivo local para abrir:" << filePath;
+        emit openDocumentRequested(filePath);
+    } else {
+        qWarning() << "IPC: No se encontró la ruta del archivo local o el archivo no existe:" << filePath;
+    }
+}
+
+void JSBridge::setCurrentTab(int tabIndex)
+{
+    qInfo() << "IPC: Cambio de pestaña solicitado desde React:" << tabIndex;
+    emit currentTabChangeRequested(tabIndex);
 }

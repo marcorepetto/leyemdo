@@ -204,6 +204,39 @@ class VectorDB:
         return True
 
     @classmethod
+    def update_document_metadata(cls, document_id: str, reading_progress: float | None = None, tags: list[str] | None = None) -> bool:
+        """Actualiza el progreso de lectura y/o los tags de un documento en LanceDB."""
+        db = cls.get_db()
+        table_names = cls._get_table_names(db)
+        if "documents" not in table_names:
+            return False
+
+        doc_table = db.open_table("documents")
+
+        # Verificar existencia
+        docs = doc_table.search().where(f"document_id = '{document_id}'").to_list()
+        if not docs:
+            logger.warning(f"Intento de actualizar metadatos de documento inexistente: {document_id}")
+            return False
+
+        values = {}
+        if reading_progress is not None:
+            values["reading_progress"] = float(reading_progress)
+        if tags is not None:
+            values["tags"] = tags
+
+        if not values:
+            return True
+
+        try:
+            doc_table.update(where=f"document_id = '{document_id}'", values=values)
+            logger.info(f"Metadatos del documento {document_id} actualizados correctamente: {values}")
+            return True
+        except Exception as e:
+            logger.error(f"Error actualizando metadatos de documento {document_id} en LanceDB: {e}", exc_info=True)
+            return False
+
+    @classmethod
     def search_chunks(cls, query_vector: list[float], limit: int = 5, where: str | None = None) -> list[dict]:
         """Realiza una búsqueda semántica de vecinos más cercanos en la tabla de chunks, con filtro where opcional."""
         db = cls.get_db()

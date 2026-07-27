@@ -48,6 +48,8 @@ void MainWindow::setupVisor()
     // Conectar el mensaje recibido de JS a un slot de MainWindow
     connect(m_bridge, &JSBridge::messageReceived, this, &MainWindow::handleJSMessage);
     connect(m_bridge, &JSBridge::pageNavigationRequested, this, &MainWindow::scrollToPage);
+    connect(m_bridge, &JSBridge::openDocumentRequested, this, &MainWindow::openDocument);
+    connect(m_bridge, &JSBridge::currentTabChangeRequested, this, &MainWindow::setCurrentTab);
 
     // --- PESTAÑA 1: DOCUMENTO Y CHAT ---
     QWidget *tabReader = new QWidget(m_tabWidget);
@@ -131,5 +133,13 @@ void MainWindow::scrollToPage(int pageNumber)
         QUrl url = QUrl::fromLocalFile(m_currentFilePath);
         url.setFragment(QString::number(pageNumber));
         m_part->openUrl(url);
+    }
+}
+
+void MainWindow::setCurrentTab(int tabIndex)
+{
+    if (m_tabWidget && tabIndex >= 0 && tabIndex < m_tabWidget->count()) {
+        qInfo() << "MainWindow: Cambiando pestaña activa a:" << tabIndex;
+        m_tabWidget->setCurrentIndex(tabIndex);
     }
 }

@@ -1,6 +1,8 @@
 import logging
+import numpy as np
 
 from fastapi import APIRouter, HTTPException, Query, status
+from pydantic import BaseModel
 
 from app.core.config import settings
 from app.services.embeddings import get_embedding_service
@@ -100,3 +102,79 @@ async def search_library(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error interno al procesar la búsqueda semántica.",
         ) from e
+
+
+@router.get("/graph")
+def get_library_graph():
+    """Obtiene los nodos y aristas de similitud semántica para el grafo de la biblioteca."""
+    try:
+        docs = VectorDB.get_documents()
+        if not docs:
+            return {"nodes": [], "edges": []}
+
+        doc_vectors = {}
+        nodes = []
+
+        for doc in docs:
+            doc_id = doc["document_id"]
+            chunks = VectorDB.get_document_chunks(doc_id)
+            if chunks:
+                # Promediar embeddings de los chunks para obtener el vector del documento
+                vectors = [np.array(c["vector"]) for c in chunks if "vector" in c and c["vector"] is not None]
+                if vectors:
+                    doc_vectors[doc_id] = np.mean(vectors, axis=0)
+                    nodes.append({
+                        "id": doc_id,
+                        "label": doc["filename"],
+                        "pages_count": doc["pages_count"],
+                        "reading_progress": doc.get("reading_progress", 0.0),
+                        "added_at": doc["added_at"],
+                    })
+
+        edges = []
+        doc_ids = list(doc_vectors.keys())
+        for i in range(len(doc_ids)):
+            for j in range(i + 1, len(doc_ids)):
+                id_a, id_b = doc_ids[i], doc_ids[j]
+                vec_a, vec_b = doc_vectors[id_a], doc_vectors[id_b]
+
+                norm_a = np.linalg.norm(vec_a)
+                norm_b = np.linalg.norm(vec_b)
+                if norm_a > 0 and norm_b > 0:
+                    sim = float(np.dot(vec_a, vec_b) / (norm_a * norm_b))
+                    # Retornar relaciones con similitud coseno significativa
+                    if sim >= 0.3:
+                        edges.append({
+                            "source": id_a,
+                            "target": id_b,
+                            "similarity": round(sim, 4)
+                        })
+
+        return {"nodes": nodes, "edges": edges}
+    except Exception as e:
+        logger.error(f"Error generando grafo de la biblioteca: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Error interno al generar el grafo de similitud.",
+        ) from e
+
+
+class DocumentUpdateSchema(BaseModel):
+    reading_progress: float | None = None
+    tags: list[str] | None = None
+
+
+@router.put("/documents/{document_id}")
+def update_document(document_id: str, request: DocumentUpdateSchema):
+    """Actualiza el progreso de lectura y/o los tags de un documento en la biblioteca."""
+    success = VectorDB.update_document_metadata(
+        document_id,
+        reading_progress=request.reading_progress,
+        tags=request.tags
+    )
+    if not success:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"Documento con ID {document_id} no encontrado en la biblioteca.",
+        )
+    return {"status": "success", "message": f"Documento {document_id} actualizado exitosamente."}
