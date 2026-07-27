@@ -125,6 +125,8 @@ void MainWindow::scrollToPage(int pageNumber)
 {
     if (m_part && !m_currentFilePath.isEmpty()) {
         qInfo() << "MainWindow: Desplazando visor a página:" << pageNumber;
-        m_part->openUrl(QUrl::fromLocalFile(m_currentFilePath) + QString("#%1").arg(pageNumber));
+        QUrl url = QUrl::fromLocalFile(m_currentFilePath);
+        url.setFragment(QString::number(pageNumber));
+        m_part->openUrl(url);
     }
 }

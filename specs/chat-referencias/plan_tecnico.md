@@ -135,8 +135,9 @@ connect(m_bridge, &JSBridge::pageNavigationRequested, this, &MainWindow::scrollT
 void MainWindow::scrollToPage(int pageNumber)
 {
     if (m_part && !m_currentFilePath.isEmpty()) {
-        // Okular KPart maneja la navegación sin recargar el archivo si pasamos el fragmento
-        m_part->openUrl(QUrl::fromLocalFile(m_currentFilePath) + QString("#%1").arg(pageNumber));
+        QUrl url = QUrl::fromLocalFile(m_currentFilePath);
+        url.setFragment(QString::number(pageNumber));
+        m_part->openUrl(url);
     }
 }
 ```
