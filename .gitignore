@@ -24,3 +24,5 @@ build/
 *.a
 *.so
 lector-visor
+
+*.pdf

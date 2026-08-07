@@ -1,7 +1,9 @@
 import io
+from unittest.mock import patch
 
 import fitz
 from fastapi import status
+from app.services.metadata_extractor import PaperMetadata
 
 
 def create_mock_pdf() -> bytes:
@@ -120,3 +122,30 @@ def test_upload_and_ingest_pipeline(client):
     # Verificar que tampoco se pueden recuperar sus chunks
     chunks_response_post = client.get(f"/api/v1/documents/chunks/{document_id}")
     assert chunks_response_post.status_code == status.HTTP_404_NOT_FOUND
+
+
+@patch("app.api.v1.endpoints.documents.extract_paper_metadata")
+def test_extract_metadata_endpoint(mock_extract, client):
+    mock_extract.return_value = PaperMetadata(
+        title="Mock Title For Testing Endpoint",
+        authors=["Alice", "Bob"],
+        journal="Journal of Testing",
+        year=2026,
+        doi="10.1234/test.123",
+        abstract="Mock abstract for test.",
+        extraction_source="doi"
+    )
+    
+    pdf_data = create_mock_pdf()
+    file_like = io.BytesIO(pdf_data)
+    
+    response = client.post(
+        "/api/v1/documents/extract-metadata",
+        files={"file": ("mock_paper.pdf", file_like, "application/pdf")},
+    )
+    
+    assert response.status_code == status.HTTP_200_OK
+    res_data = response.json()
+    assert res_data["title"] == "Mock Title For Testing Endpoint"
+    assert res_data["authors"] == ["Alice", "Bob"]
+    assert res_data["extraction_source"] == "doi"

@@ -1,37 +1,73 @@
+import logging
 import fitz  # PyMuPDF
 
-from app.services.pdf_parser import filter_nested_blocks, recursive_xy_cut
+from app.services.pdf_parser import parse_pdf
+
+logger = logging.getLogger("pdf-debug")
+
+
+def decode_font_flags(flags: int) -> list[str]:
+    """Decodifica los flags de estilo de fuente en PyMuPDF a etiquetas legibles."""
+    attrs = []
+    if flags & 1:
+        attrs.append("superscript")
+    if flags & 2:
+        attrs.append("italic")
+    if flags & 4:
+        attrs.append("serif")
+    if flags & 8:
+        attrs.append("monospaced")
+    if flags & 16:
+        attrs.append("bold")
+    return attrs
 
 
 def draw_debug_annotations(file_bytes: bytes, page_number: int) -> bytes:
-    """Abre el PDF, dibuja bounding boxes de bloques, coordenadas en esquinas y
+    """Abre el PDF, obtiene el output estructurado de parse_pdf y dibuja bounding boxes de bloques,
 
-    el orden secuencial resultante en la página especificada, y retorna la imagen PNG.
+    coordenadas en esquinas y el orden secuencial resultante en la página especificada, y retorna la imagen PNG.
     """
+    # 1. Obtener la salida estructurada de la función de parsing
+    parsed_pages = parse_pdf(file_bytes)
+
+    if page_number < 1 or page_number > len(parsed_pages):
+        raise ValueError(f"Número de página inválido: {page_number}. El documento tiene {len(parsed_pages)} páginas.")
+
+    page_data = parsed_pages[page_number - 1]
+
+    # 2. Abrir el documento para renderizado e inserción de anotaciones
     doc = fitz.open(stream=file_bytes, filetype="pdf")
-
-    if page_number < 1 or page_number > len(doc):
-        doc.close()
-        raise ValueError(f"Número de página inválido: {page_number}. El documento tiene {len(doc)} páginas.")
-
     page = doc[page_number - 1]
-    raw_blocks = page.get_text("blocks")
 
-    # Filtrar solo bloques que sean texto (b[6] == 0) y no estén vacíos
-    text_blocks = []
-    for b in raw_blocks:
-        if len(b) > 6 and b[6] == 0 and b[4].strip():
-            text_blocks.append(b)
+    # 3. Dibujar anotaciones sobre la página basadas estrictamente en la salida del parser
+    for block in page_data.get("blocks", []):
+        index = block["index"]
+        x0, y0, x1, y1 = block["bbox"]
+        block_no = block["block_no"]
+        spans = block.get("spans", [])
 
-    # Eliminar bloques anidados geométricamente
-    clean_blocks = filter_nested_blocks(text_blocks)
-
-    # Ordenar los bloques usando el algoritmo de Recursive X-Y Cut
-    text_blocks = recursive_xy_cut(clean_blocks)
-
-    # Dibujar anotaciones sobre la página
-    for index, b in enumerate(text_blocks, start=1):
-        x0, y0, x1, y1 = b[0], b[1], b[2], b[3]
+        # Loggear los metadatos detallados del bloque y sus spans
+        logger.info(
+            f"Bloque {index}/{len(page_data['blocks'])} [block_no={block_no}] - bbox: ({x0:.1f}, {y0:.1f}, {x1:.1f}, {y1:.1f})"
+        )
+        logger.info(f"  Texto completo: {block['text']}")
+        
+        for span_idx, span in enumerate(spans, start=1):
+            text = span.get("text", "").strip()
+            if not text:
+                continue
+            font = span.get("font", "Desconocida")
+            size = span.get("size", 0.0)
+            color_int = span.get("color", 0)
+            r, g, b_val = (color_int >> 16) & 255, (color_int >> 8) & 255, color_int & 255
+            color_hex = f"#{r:02X}{g:02X}{b_val:02X}"
+            flags = span.get("flags", 0)
+            flag_attrs = decode_font_flags(flags)
+            flag_str = ", ".join(flag_attrs) if flag_attrs else "ninguno"
+            
+            logger.info(
+                f"    Span {span_idx}: '{text}' | Fuente: {font} | Tamaño: {size:.1f}pt | Color: {color_hex} (RGB: {r},{g},{b_val}) | Flags: {flags} ({flag_str})"
+            )
 
         # 1. Bounding box (Rectángulo rojo)
         rect = fitz.Rect(x0, y0, x1, y1)
@@ -54,7 +90,6 @@ def draw_debug_annotations(file_bytes: bytes, page_number: int) -> bytes:
         page.draw_circle(center, radius=9, color=(0, 0.5, 0), fill=(1, 1, 0.8), width=1.0)
 
         # Insertar el número secuencial centrado
-        # Pequeño ajuste para centrar la visualización del texto de un dígito o dos
         text_str = str(index)
         offset_x = 2.5 if len(text_str) == 1 else 5.0
         page.insert_text(

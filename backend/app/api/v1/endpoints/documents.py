@@ -13,6 +13,7 @@ from fastapi import (
 
 from app.services.ingest import TASK_STATUS, run_ingest_pipeline
 from app.services.vector_db import VectorDB
+from app.services.metadata_extractor import extract_paper_metadata, PaperMetadata
 
 router = APIRouter()
 
@@ -106,3 +107,23 @@ def get_document_chunks(document_id: str):
         "pages_count": doc["pages_count"],
         "total_chars": doc["total_chars"],
     }
+
+
+@router.post("/extract-metadata", response_model=PaperMetadata)
+async def extract_metadata(file: UploadFile = File(...)):
+    """Extrae metadatos de un paper científico en cascada (Embedded -> DOI -> LLM -> Fallback)."""
+    if not file.filename.endswith(".pdf"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Solo se admiten archivos PDF.",
+        )
+        
+    try:
+        file_bytes = await file.read()
+        metadata = await extract_paper_metadata(file_bytes, file.filename)
+        return metadata
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error durante la extracción de metadatos: {str(e)}",
+        )
