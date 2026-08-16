@@ -1,31 +1,40 @@
 # Guía de Inicialización del Repositorio
 
-Este documento describe cómo configurar y levantar cada componente del proyecto desde cero.
+Este documento describe cómo configurar y levantar cada componente del proyecto desde cero, en orden.
 
 ## Estado actual del proyecto
 
-- **Backend** (FastAPI + LanceDB + OpenRouter): implementado (Specs 1–4 + tool de debug).
+- **Backend** (FastAPI + LanceDB + OpenRouter): implementado (Specs 1–5).
 - **Base de datos vectorial** (LanceDB): implementada y embebida en el backend.
-- **Frontend** (fork de Okular C++/Qt + React vía QWebEngineView): **no implementado** (Specs 6–10 pendientes).
-- **Orquestación**: no existe `docker-compose`, `Makefile` ni scripts; solo el gestor `uv`.
+- **Visor nativo** (C++/Qt 6 basado en Okular): implementado (`visor/`) (Specs 6).
+- **Frontend** (React + TypeScript + Vite): implementado (`frontend/`), embebido en el visor vía QWebEngineView + Qt WebChannel (Specs 7–10).
+- **Orquestación**: no existe `docker-compose`, `Makefile` ni scripts de orquestación. Cada componente se levanta por separado.
 
-Requisito previo: **uv** (gestor de dependencias). Verificar con `uv --version`. Instalar si falta:
+**Prerrequisito back-end:** **uv** (gestor de dependencias Python). Verificar con `uv --version`. Instalar si falta:
 
 ```bash
 curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-## 1. Backend (FastAPI)
+---
 
-Desde la raíz del repositorio:
+## Orden de arranque
+
+El visor nativo carga la UI de React desde `http://localhost:5173` (rutas `/chat` y `/library`) y el frontend llama al backend en `http://localhost:8000`. Por tanto, el orden es:
+
+1. **Backend** (puerto 8000) → 2. **Frontend** (puerto 5173) → 3. **Visor** (Consume ambos).
+
+---
+
+## 1. Backend (FastAPI)
 
 ```bash
 cd backend
-uv sync                 # crea/actualiza .venv a partir de uv.lock (pinned)
-cp .env.example .env    # asegura la configuración (un .env ya existe si no)
+uv sync                 # crea/actualiza .venv a partir de uv.lock (versionado)
+cp .env.example .env    # asegura la configuración
 ```
 
-Ejecutar el servidor (ancla en `127.0.0.1:8000`):
+Ejecutar el servidor (escucha en `127.0.0.1:8000`):
 
 ```bash
 uv run uvicorn app.main:app --reload
@@ -42,7 +51,7 @@ Configuración en `backend/app/core/config.py` (cargada de `.env` vía pydantic-
 - `OPENROUTER_API_KEY` — obligatoria para embeddings, chat (SSE) y reranking reales.
 - `GEMINI_API_KEY` — definida pero no en uso activo (alternativa documentada).
 
-> ⚠️ **Seguridad:** una aparente clave real de OpenRouter está commiteada en `backend/.env.example` y `backend/.env`. Si es una clave válida, se debe rotar/revocar.
+> ⚠️ **Seguridad:** una aparente clave real de OpenRouter está commiteada en `backend/.env.example`. Si es una clave válida, se debe rotar/revocar.
 
 ## 2. Base de datos vectorial (LanceDB)
 
@@ -53,30 +62,92 @@ Configuración en `backend/app/core/config.py` (cargada de `.env` vía pydantic-
 - Datos en `backend/data/vector_db/` (gitignored).
 - Ruta configurable con `VECTOR_DB_PATH="data/vector_db"`.
 
-## 3. Frontend
+## 3. Frontend (React + TypeScript + Vite)
 
-**Aún no implementado.** No hay `frontend/`, `package.json` ni build. Arquitectura prevista (`docs/propuesta_tecnica.md`):
+```bash
+cd frontend
+npm install      # instala dependencias desde package-lock.json
+npm run dev      # servidor de desarrollo en http://localhost:5173
+```
 
-- **Okular (C++/Qt)** como visor PDF nativo.
-- **React + TypeScript** (paneles chat/biblioteca) embebidos vía **QWebEngineView**.
-- **Qt WebChannel** como IPC C++ ↔ React.
+Nota: **el visor nativo espera el frontend en el puerto 5173** (por defecto). El frontend selecciona la vista según la ruta URL: `/chat` o `/library`. Si quieres que el visor apunte a otra URL, define la variable de entorno `DEV_URL` al lanzar el visor.
 
-Único artefacto frontend actual: UI de debug en HTML servida por el backend en `GET /api/v1/debug/ui`.
+Scripts disponibles (`frontend/package.json`):
+- `npm run dev` — servidor Vite de desarrollo.
+- `npm run build` — `tsc -b && vite build`.
+- `npm run lint` — `oxlint`.
+- `npm run preview` — previsualizar build.
 
-## 4. Aplicación (integración)
+## 4. Aplicación de escritorio / Visor (C++ / Qt 6, basado en Okular)
 
-Sin orquestador: la "aplicación" hoy es el propio backend. Flujo de ingestión vía `BackgroundTask` (`backend/app/services/ingest.py`): parseo PyMuPDF → chunking → embeddings (OpenRouter/mock) → persistencia en LanceDB.
+El ejecutable resultante se llama `lector-visor` y se genera desde `visor/`.
 
-Flujo previsto completo: **Okular ↔ WebChannel ↔ React ↔ FastAPI sidecar ↔ LanceDB ↔ OpenRouter**.
+### Prerrequisitos (Fedora)
+
+```bash
+sudo dnf install -y \
+    gcc-c++ \
+    cmake \
+    extra-cmake-modules \
+    qt6-qtbase-devel \
+    kf6-kparts-devel \
+    kf6-kxmlgui-devel \
+    kf6-ki18n-devel \
+    okular-devel \
+    okular-libs \
+    okular-part
+```
+
+### Compilación
+
+```bash
+cd visor
+mkdir build && cd build
+cmake ..    # configura con CMake
+make        # genera el binario lector-visor
+```
+
+> El `CMakeLists.txt` además requiere los módulos Qt6 `WebEngineWidgets` y `WebChannel` (`find_package`). Si falla el paso de CMake, instala el paquete de desarrollo de Qt WebEngine (`qt6-qtwebengine-devel`) que no figura en la lista del README del visor.
+
+### Ejecución
+
+```bash
+./lector-visor /ruta/al/documento.pdf
+```
+
+El visor:
+- Carga el KPart de Okular para visualizar el PDF en la pestaña **Documento**.
+- Embebe la UI de React (`http://localhost:5173/chat`) a la derecha, con comunicación bidireccional vía **Qt WebChannel** (`qtBridge`).
+- Carga la pestaña **Biblioteca** con `/library` a pantalla completa.
+- Registra atajos: `Alt+E` (explicar), `Alt+R` (resumir), `Alt+T` (copiar al chat).
+
+Si se quiere apuntar a otra URL del frontend en vez de la de desarrollo:
+
+```bash
+DEV_URL=http://localhost:5173 ./lector-visor /ruta/al/documento.pdf
+```
+
+## Aplicación end-to-end (flujo integrado)
+
+1. **Backend** arrancado en `:8000` (crea LanceDB automáticamente).
+2. **Frontend** dev server en `:5173`.
+3. **Visor** en ejecución; carga PDF y las pestañas React que consumen la API del backend (`http://localhost:8000/api/v1/...`).
+
+Flujo de datos: **visor Okular ↔ Qt WebChannel ↔ React ↔ FastAPI (`:8000`) ↔ LanceDB ↔ OpenRouter**.
 
 ## Verificación
 
 ```bash
+# Backend (tests con provider mock + BD vectorial temporal)
 cd backend
-uv run pytest                    # tests (provider mock + BD vectorial temporal)
-uv run ruff check .              # lint
-uv run ruff format .             # formato
+uv run pytest
+uv run ruff check .
+uv run ruff format .
 curl http://127.0.0.1:8000/api/v1/health
+
+# Frontend
+cd frontend
+npm run lint
 ```
 
 ## Referencias clave
@@ -86,8 +157,10 @@ curl http://127.0.0.1:8000/api/v1/health
 | Entrada backend | `backend/app/main.py` |
 | Configuración | `backend/app/core/config.py` |
 | BD vectorial | `backend/app/services/vector_db.py` |
-| Dependencias | `backend/pyproject.toml`, `backend/uv.lock` |
+| Dependencias backend | `backend/pyproject.toml`, `backend/uv.lock` |
 | Template de entorno | `backend/.env.example` |
+| Frontend | `frontend/` (`package.json`, `vite.config.ts`) |
+| Visor C++/Qt | `visor/` (`CMakeLists.txt`, `README.md`) |
 | Estado del proyecto | `ETAPAS DE DESARROLLO.md` |
 | Arquitectura | `docs/propuesta_tecnica.md` |
-| Instrucciones de ejecución | `specs/backend-base/plan_implementacion.md` |
+| Planes por spec | `specs/<feature>/plan_implementacion.md` |
